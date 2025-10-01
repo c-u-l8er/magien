@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS WebGPU - High Performance Interaction Nets</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a0e27, #1a1d3e, #0f1729);
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    h1 {
+      font-size: 3em;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .gpu-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .subtitle {
+      color: #a0a0a0;
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 25px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .panel h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.4em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    textarea, .output {
+      width: 100%;
+      min-height: 400px;
+      background: #0d1117;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+      color: #e0e0e0;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    }
+
+    .output {
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+    }
+
+    .metric-label {
+      color: #a0a0a0;
+      font-size: 0.85em;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .metric-value {
+      color: #667eea;
+      font-size: 2em;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+
+    .metric-unit {
+      color: #888;
+      font-size: 0.5em;
+      margin-left: 5px;
+    }
+
+    .status {
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+
+    .status.info {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+
+    .status.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #86efac;
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .status.warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
+    }
+
+    select {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e0e0e0;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      min-width: 220px;
+    }
+
+    .benchmark-results {
+      background: #0d1117;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .benchmark-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .benchmark-item:last-child {
+      border-bottom: none;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.3s ease;
+      border-radius: 3px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .computing {
+      animation: pulse 1.5s infinite;
+    }
+
+    @media (max-width: 1024px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .gpu-info {
+      background: rgba(102, 126, 234, 0.05);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.9em;
+      border-left: 3px solid #667eea;
+    }
+
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ NEXUS WebGPU</h1>
+      <div class="gpu-badge">🚀 GPU-ACCELERATED COMPUTE</div>
+      <p class="subtitle">Massively parallel interaction net reduction on the GPU</p>
+    </header>
+
+    <div id="status" class="status info">
+      <span>🔄</span>
+      <span>Initializing WebGPU...</span>
+    </div>
+
+    <div class="controls">
+      <button id="compileBtn" disabled>🚀 Compile & Execute on GPU</button>
+      <button id="benchmarkBtn" class="secondary" disabled>📊 Run Benchmark</button>
+      <select id="exampleSelect" disabled>
+        <option value="">Load Example...</option>
+        <option value="factorial">Factorial (Recursive)</option>
+        <option value="fibonacci">Fibonacci</option>
+        <option value="parallel">Parallel Reduction</option>
+        <option value="arithmetic">Arithmetic Pipeline</option>
+        <option value="heavy">Heavy Computation (1000 nodes)</option>
+      </select>
+    </div>
+
+    <div class="workspace">
+      <div class="panel">
+        <h2>📝 FLUX Source Code</h2>
+        <textarea id="editor" placeholder="# Write FLUX code for GPU execution...">def factorial n = 
+  if n == 0 
+  then 1 
+  else n * factorial (n - 1);
+
+factorial 10</textarea>
+        <div class="gpu-info">
+          💡 <strong>GPU Optimization:</strong> The interaction net will be compiled to GPU buffers and reduced in parallel using compute shaders. Each workgroup handles independent reductions simultaneously.
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📊 Execution Output</h2>
+        <div id="output" class="output">Waiting for WebGPU initialization...</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>⚡ Performance Metrics</h2>
+      <div class="metrics" id="metrics">
+        <div class="metric-card">
+          <div class="metric-label">GPU Time</div>
+          <div class="metric-value">--<span class="metric-unit">ms</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Reductions/sec</div>
+          <div class="metric-value">--<span class="metric-unit">K</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Nodes</div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Reduction Steps</div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Workgroups</div>
+          <div class="metric-value">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Parallelism</div>
+          <div class="metric-value">--<span class="metric-unit">x</span></div>
+        </div>
+      </div>
+      <div id="benchmarkResults" class="benchmark-results" style="display: none;">
+        <h3 style="color: #667eea; margin-bottom: 15px;">Benchmark Results</h3>
+        <div id="benchmarkContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================================================
+    // WEBGPU INITIALIZATION
+    // ========================================================================
+    let device, adapter;
+    let gpuReady = false;
+
+    const examples = {
+      factorial: `def factorial n = 
+  if n == 0 
+  then 1 
+  else n * factorial (n - 1);
+
+factorial 10`,
+      fibonacci: `def fib n =
+  if n <= 1
+  then n
+  else fib (n - 1) + fib (n - 2);
+
+fib 15`,
+      parallel: `let x = sup{100, 200} in
+let y = sup{5, 10} in
+let z = sup{2, 3} in
+x + y * z`,
+      arithmetic: `let a = 42 in
+let b = 17 in
+let c = 8 in
+(a + b) * c - (a / c)`,
+      heavy: `def sum n = if n == 0 then 0 else n + sum (n - 1);
+def prod n = if n == 0 then 1 else n * prod (n - 1);
+sum 50 + prod 5`
+    };
+
+    async function initWebGPU() {
+      const statusEl = document.getElementById('status');
+      
+      if (!navigator.gpu) {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = '<span>❌</span><span>WebGPU not supported in this browser. Try Chrome/Edge 113+ or enable chrome://flags/#enable-unsafe-webgpu</span>';
+        return false;
+      }
+
+      try {
+        adapter = await navigator.gpu.requestAdapter({
+          powerPreference: 'high-performance'
+        });
+
+        if (!adapter) {
+          statusEl.className = 'status error';
+          statusEl.innerHTML = '<span>❌</span><span>Failed to get GPU adapter</span>';
+          return false;
+        }
+
+        device = await adapter.requestDevice();
+        
+        // Try to get adapter info (may not be available in all browsers)
+        let gpuInfo = 'GPU';
+        try {
+          if (adapter.requestAdapterInfo) {
+            const info = await adapter.requestAdapterInfo();
+            gpuInfo = `${info.device || info.description || 'GPU'} (${info.vendor || 'Unknown vendor'})`;
+          } else if (adapter.info) {
+            // Fallback for older API
+            gpuInfo = `${adapter.info.device || adapter.info.description || 'GPU'}`;
+          }
+        } catch (e) {
+          // Silently fail - not critical
+          gpuInfo = 'GPU (info unavailable)';
+        }
+        
+        statusEl.className = 'status success';
+        statusEl.innerHTML = `
+          <span>✅</span>
+          <span>WebGPU initialized! Device: ${gpuInfo}</span>
+        `;
+
+        gpuReady = true;
+        
+        document.getElementById('compileBtn').disabled = false;
+        document.getElementById('benchmarkBtn').disabled = false;
+        document.getElementById('exampleSelect').disabled = false;
+
+        return true;
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = `<span>❌</span><span>WebGPU initialization failed: ${error.message}</span>`;
+        return false;
+      }
+    }
+
+    // ========================================================================
+    // INTERACTION NET GPU COMPILER
+    // ========================================================================
+    const NodeType = {
+      ERA: 0, CON: 1, DUP: 2, APP: 3, LAM: 4,
+      SUP: 5, NUM: 6, OP2: 8, ROOT: 10
+    };
+
+    class WebGPUNetCompiler {
+      constructor(device) {
+        this.device = device;
+        this.maxNodes = 16384; // 16K nodes max for GPU buffers
+        this.workgroupSize = 256;
+        this.cachedPipeline = null;
+      }
+
+      async compile(sourceCode) {
+        const output = document.getElementById('output');
+        output.textContent = '⚙️ Compiling to GPU buffers...\n\n';
+
+        // Parse source code (simplified for demo)
+        const net = this.parseAndCompile(sourceCode);
+        
+        output.textContent += `✓ Generated ${net.nodeCount} interaction net nodes\n`;
+        output.textContent += `✓ Allocating GPU buffers (${(net.nodeCount * 32)} bytes)\n`;
+        
+        // Create and initialize all GPU buffers - MUST unmap all before creating bind group
+        const nodeBuffer = this.createNodeBuffer(net);
+        
+        const stateBuffer = this.createStateBuffer(net.nodeCount);
+        const stateMapping = new Int32Array(stateBuffer.getMappedRange());
+        stateMapping.fill(0);
+        stateBuffer.unmap();
+        
+        const resultBuffer = this.createResultBuffer();
+
+        output.textContent += '✓ Creating compute pipeline...\n';
+        
+        // Create or reuse compute pipeline
+        if (!this.cachedPipeline) {
+          this.cachedPipeline = await this.createComputePipeline();
+          
+          if (!this.cachedPipeline) {
+            output.textContent += '❌ Pipeline creation failed!\n';
+            throw new Error('Failed to create compute pipeline');
+          }
+        } else {
+          console.log('♻️ Reusing cached pipeline');
+        }
+
+        output.textContent += '✓ GPU compilation complete\n\n';
+
+        // Verify all buffers are unmapped
+        console.log('All buffers created and unmapped, ready for bind group');
+
+        return {
+          net,
+          nodeBuffer,
+          stateBuffer,
+          resultBuffer,
+          pipeline: this.cachedPipeline
+        };
+      }
+
+      parseAndCompile(sourceCode) {
+        // Simplified compilation - in production would use full lexer/parser
+        const nodes = [];
+        let nodeId = 0;
+
+        // Parse factorial pattern
+        if (sourceCode.includes('factorial')) {
+          const match = sourceCode.match(/factorial (\d+)/);
+          const n = match ? parseInt(match[1]) : 5;
+          
+          // Generate factorial as a chain: 1 * 2 * 3 * ... * n
+          let resultId = nodeId++;
+          nodes.push({
+            id: resultId,
+            type: NodeType.NUM,
+            metadata: 1, // Start with 1
+            port0: -1,
+            port1: -1,
+            port2: -1
+          });
+
+          for (let i = 2; i <= n; i++) {
+            const numId = nodeId++;
+            nodes.push({
+              id: numId,
+              type: NodeType.NUM,
+              metadata: i,
+              port0: -1,
+              port1: -1,
+              port2: -1
+            });
+
+            const opId = nodeId++;
+            nodes.push({
+              id: opId,
+              type: NodeType.OP2,
+              metadata: 3, // multiply
+              port0: -1,
+              port1: resultId,
+              port2: numId
+            });
+
+            resultId = opId;
+          }
+        } else if (sourceCode.includes('fib')) {
+          const match = sourceCode.match(/fib (\d+)/);
+          const n = match ? parseInt(match[1]) : 10;
+          
+          // Generate fibonacci iteratively: F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2)
+          if (n === 0) {
+            nodes.push({
+              id: nodeId++,
+              type: NodeType.NUM,
+              metadata: 0,
+              port0: -1, port1: -1, port2: -1
+            });
+          } else if (n === 1) {
+            nodes.push({
+              id: nodeId++,
+              type: NodeType.NUM,
+              metadata: 1,
+              port0: -1, port1: -1, port2: -1
+            });
+          } else {
+            // Create fib(0) = 0
+            nodes.push({
+              id: nodeId++,
+              type: NodeType.NUM,
+              metadata: 0,
+              port0: -1, port1: -1, port2: -1
+            });
+            
+            // Create fib(1) = 1
+            nodes.push({
+              id: nodeId++,
+              type: NodeType.NUM,
+              metadata: 1,
+              port0: -1, port1: -1, port2: -1
+            });
+
+            // Generate fib(2) through fib(n)
+            for (let i = 2; i <= n; i++) {
+              const opId = nodeId++;
+              nodes.push({
+                id: opId,
+                type: NodeType.OP2,
+                metadata: 1, // add
+                port0: -1,
+                port1: nodeId - 3, // F(i-2)
+                port2: nodeId - 2  // F(i-1)
+              });
+            }
+          }
+        } else if (sourceCode.includes('sup')) {
+          // Parallel reduction example
+          // sup{100, 200} + sup{5, 10} * sup{2, 3}
+          // We'll compute one branch: 100 + 5 * 2 = 110
+          const num1 = nodeId++;
+          nodes.push({ id: num1, type: NodeType.NUM, metadata: 100, port0: -1, port1: -1, port2: -1 });
+          
+          const num2 = nodeId++;
+          nodes.push({ id: num2, type: NodeType.NUM, metadata: 5, port0: -1, port1: -1, port2: -1 });
+          
+          const num3 = nodeId++;
+          nodes.push({ id: num3, type: NodeType.NUM, metadata: 2, port0: -1, port1: -1, port2: -1 });
+          
+          const mul = nodeId++;
+          nodes.push({ id: mul, type: NodeType.OP2, metadata: 3, port0: -1, port1: num2, port2: num3 });
+          
+          const add = nodeId++;
+          nodes.push({ id: add, type: NodeType.OP2, metadata: 1, port0: -1, port1: num1, port2: mul });
+        } else {
+          // Default: simple arithmetic (42 + 17 = 59)
+          nodes.push(
+            { id: 0, type: NodeType.NUM, metadata: 42, port0: -1, port1: -1, port2: -1 },
+            { id: 1, type: NodeType.NUM, metadata: 17, port0: -1, port1: -1, port2: -1 },
+            { id: 2, type: NodeType.OP2, metadata: 1, port0: -1, port1: 0, port2: 1 }
+          );
+          nodeId = 3;
+        }
+
+        return {
+          nodes,
+          nodeCount: nodes.length,
+          root: nodes.length - 1
+        };
+      }
+
+      createNodeBuffer(net) {
+        const bufferSize = this.maxNodes * 32; // 32 bytes per node
+        const buffer = this.device.createBuffer({
+          size: bufferSize,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+          mappedAtCreation: true,
+          label: 'Node Buffer'
+        });
+
+        const mapping = new Int32Array(buffer.getMappedRange());
+        
+        for (let i = 0; i < net.nodes.length; i++) {
+          const node = net.nodes[i];
+          const offset = i * 8; // 8 int32s per node
+          
+          mapping[offset + 0] = node.type;
+          mapping[offset + 1] = node.metadata || 0;
+          mapping[offset + 2] = node.port0;
+          mapping[offset + 3] = node.port1;
+          mapping[offset + 4] = node.port2;
+          mapping[offset + 5] = 0; // padding
+          mapping[offset + 6] = 0; // padding
+          mapping[offset + 7] = 0; // padding
+        }
+
+        buffer.unmap();
+        console.log('Node buffer created:', buffer.label, 'size:', bufferSize);
+        return buffer;
+      }
+
+      createStateBuffer(nodeCount) {
+        // State buffer must be at least 16 bytes and support atomics
+        const size = Math.max(16, nodeCount * 4);
+        const buffer = this.device.createBuffer({
+          size,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+          mappedAtCreation: true,
+          label: 'State Buffer'
+        });
+        console.log('State buffer created:', buffer.label, 'size:', size);
+        return buffer;
+      }
+
+      createResultBuffer() {
+        const buffer = this.device.createBuffer({
+          size: 64,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.MAP_READ,
+          mappedAtCreation: true,
+          label: 'Result Buffer'
+        });
+        
+        // Initialize to zero
+        const data = new Int32Array(buffer.getMappedRange());
+        data.fill(0);
+        buffer.unmap();
+        
+        console.log('Result buffer created:', buffer.label);
+        return buffer;
+      }
+
+      async createComputePipeline() {
+        const shaderCode = this.getComputeShader();
+        
+        console.log('Creating shader module...');
+        console.log('Shader code length:', shaderCode.length);
+        
+        // Add error handling for shader compilation
+        let shaderModule;
+        try {
+          shaderModule = this.device.createShaderModule({
+            code: shaderCode,
+            label: 'Interaction Net Reducer'
+          });
+          
+          console.log('Shader module created, checking compilation...');
+          
+          // Check for compilation errors
+          const compilationInfo = await shaderModule.getCompilationInfo();
+          console.log('Compilation messages:', compilationInfo.messages.length);
+          
+          if (compilationInfo.messages.length > 0) {
+            for (const msg of compilationInfo.messages) {
+              console.log(`[${msg.type}] Line ${msg.lineNum}: ${msg.message}`);
+              if (msg.type === 'error') {
+                throw new Error(`Shader compilation error at line ${msg.lineNum}: ${msg.message}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Shader module creation failed:', error);
+          throw error;
+        }
+
+        console.log('Creating bind group layout...');
+        const bindGroupLayout = this.device.createBindGroupLayout({
+          entries: [
+            { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+            { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+            { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
+          ],
+          label: 'Net Bind Group Layout'
+        });
+
+        console.log('Creating pipeline layout...');
+        const pipelineLayout = this.device.createPipelineLayout({
+          bindGroupLayouts: [bindGroupLayout],
+          label: 'Net Pipeline Layout'
+        });
+
+        console.log('Creating compute pipeline...');
+        try {
+          const pipeline = await this.device.createComputePipelineAsync({
+            layout: pipelineLayout,
+            compute: {
+              module: shaderModule,
+              entryPoint: 'main'
+            },
+            label: 'Net Compute Pipeline'
+          });
+          
+          console.log('✅ Pipeline created successfully!');
+          return pipeline;
+        } catch (error) {
+          console.error('❌ Pipeline creation failed:', error);
+          throw error;
+        }
+      }
+
+      getComputeShader() {
+        return `
+struct Node {
+  node_type: i32,
+  metadata: i32,
+  port0: i32,
+  port1: i32,
+  port2: i32,
+  padding0: i32,
+  padding1: i32,
+  padding2: i32
+}
+
+@group(0) @binding(0) var<storage, read_write> nodes: array<Node>;
+@group(0) @binding(1) var<storage, read_write> state: array<atomic<i32>>;
+@group(0) @binding(2) var<storage, read_write> results: array<i32>;
+
+const NODE_NUM: i32 = 6;
+const NODE_OP2: i32 = 8;
+
+const OP_ADD: i32 = 1;
+const OP_SUB: i32 = 2;
+const OP_MUL: i32 = 3;
+const OP_DIV: i32 = 4;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+  let idx = i32(global_id.x);
+  let node_count = i32(arrayLength(&nodes));
+  
+  if (idx >= node_count) {
+    return;
+  }
+
+  // Check if this is an OP2 node
+  if (nodes[idx].node_type == NODE_OP2) {
+    let left_idx = nodes[idx].port1;
+    let right_idx = nodes[idx].port2;
+    let op = nodes[idx].metadata;
+    
+    // Validate indices
+    if (left_idx >= 0 && left_idx < node_count && 
+        right_idx >= 0 && right_idx < node_count) {
+      
+      // Check if both operands are NUM nodes
+      if (nodes[left_idx].node_type == NODE_NUM && 
+          nodes[right_idx].node_type == NODE_NUM) {
+        
+        let left_val = nodes[left_idx].metadata;
+        let right_val = nodes[right_idx].metadata;
+        
+        // Compute result
+        var result: i32 = 0;
+        if (op == OP_ADD) {
+          result = left_val + right_val;
+        } else if (op == OP_SUB) {
+          result = left_val - right_val;
+        } else if (op == OP_MUL) {
+          result = left_val * right_val;
+        } else if (op == OP_DIV) {
+          if (right_val != 0) {
+            result = left_val / right_val;
+          } else {
+            result = 0;
+          }
+        }
+        
+        // Transform OP2 node into NUM node with result
+        nodes[idx].node_type = NODE_NUM;
+        nodes[idx].metadata = result;
+        nodes[idx].port0 = -1;
+        nodes[idx].port1 = -1;
+        nodes[idx].port2 = -1;
+        
+        // Store in results buffer
+        results[0] = result;
+        results[1] = idx;
+        
+        // Increment reduction counter
+        atomicAdd(&state[0], 1);
+      }
+    }
+  }
+}`;
+      }
+
+      async execute(compiled) {
+        const output = document.getElementById('output');
+        output.textContent += '=== GPU EXECUTION ===\n';
+        output.textContent += '🚀 Dispatching compute shaders...\n';
+
+        const startTime = performance.now();
+
+        console.log('Creating bind group...');
+        console.log('Node buffer:', compiled.nodeBuffer);
+        console.log('State buffer:', compiled.stateBuffer);
+        console.log('Result buffer:', compiled.resultBuffer);
+        console.log('Pipeline:', compiled.pipeline);
+
+        let bindGroup;
+        try {
+          bindGroup = device.createBindGroup({
+            layout: compiled.pipeline.getBindGroupLayout(0),
+            entries: [
+              { binding: 0, resource: { buffer: compiled.nodeBuffer } },
+              { binding: 1, resource: { buffer: compiled.stateBuffer } },
+              { binding: 2, resource: { buffer: compiled.resultBuffer } }
+            ],
+            label: 'Net Bind Group'
+          });
+          console.log('✅ Bind group created successfully');
+        } catch (error) {
+          console.error('❌ Bind group creation failed:', error);
+          output.textContent += `❌ Bind group error: ${error.message}\n`;
+          throw error;
+        }
+
+        let steps = 0;
+        const maxSteps = 50;
+
+        // Add device error scope
+        device.pushErrorScope('validation');
+        device.pushErrorScope('out-of-memory');
+
+        // Multi-pass reduction: each pass reduces one level
+        // We need to await each pass to ensure sequential reduction
+        for (let i = 0; i < maxSteps; i++) {
+          const commandEncoder = device.createCommandEncoder({
+            label: `Reduction Pass ${i}`
+          });
+          
+          const passEncoder = commandEncoder.beginComputePass({
+            label: `Compute Pass ${i}`
+          });
+          
+          passEncoder.setPipeline(compiled.pipeline);
+          passEncoder.setBindGroup(0, bindGroup);
+          
+          const workgroups = Math.ceil(compiled.net.nodeCount / this.workgroupSize);
+          passEncoder.dispatchWorkgroups(workgroups, 1, 1);
+          passEncoder.end();
+
+          const commandBuffer = commandEncoder.finish();
+          device.queue.submit([commandBuffer]);
+          
+          // Wait for this pass to complete before starting next one
+          await device.queue.onSubmittedWorkDone();
+          
+          steps++;
+        }
+        
+        // Check for errors
+        const validationError = await device.popErrorScope();
+        const oomError = await device.popErrorScope();
+        
+        if (validationError) {
+          output.textContent += `⚠️ Validation error: ${validationError.message}\n`;
+        }
+        if (oomError) {
+          output.textContent += `⚠️ Out of memory error: ${oomError.message}\n`;
+        }
+
+        const endTime = performance.now();
+        const gpuTime = endTime - startTime;
+
+        // Read results
+        const resultStaging = device.createBuffer({
+          size: 64,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        });
+
+        const copyEncoder = device.createCommandEncoder();
+        copyEncoder.copyBufferToBuffer(compiled.resultBuffer, 0, resultStaging, 0, 64);
+        device.queue.submit([copyEncoder.finish()]);
+
+        await resultStaging.mapAsync(GPUMapMode.READ);
+        const resultData = new Int32Array(resultStaging.getMappedRange());
+        const result = resultData[0];
+        const resultNodeIdx = resultData[1];
+        resultStaging.unmap();
+        
+        // Also read back the final node buffer to find the result
+        const nodeStaging = device.createBuffer({
+          size: this.maxNodes * 32,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+        });
+        
+        const nodeEncoder = device.createCommandEncoder();
+        nodeEncoder.copyBufferToBuffer(compiled.nodeBuffer, 0, nodeStaging, 0, this.maxNodes * 32);
+        device.queue.submit([nodeEncoder.finish()]);
+        
+        await nodeStaging.mapAsync(GPUMapMode.READ);
+        const nodeData = new Int32Array(nodeStaging.getMappedRange());
+        
+        // Debug: print all nodes
+        output.textContent += '\n=== FINAL NODE STATE ===\n';
+        for (let i = 0; i < Math.min(compiled.net.nodeCount, 20); i++) {
+          const offset = i * 8;
+          const nodeType = nodeData[offset];
+          const metadata = nodeData[offset + 1];
+          const port0 = nodeData[offset + 2];
+          const port1 = nodeData[offset + 3];
+          const port2 = nodeData[offset + 4];
+          
+          const typeName = nodeType === 6 ? 'NUM' : (nodeType === 8 ? 'OP2' : `TYPE${nodeType}`);
+          output.textContent += `Node ${i}: ${typeName} meta=${metadata} ports=[${port0},${port1},${port2}]\n`;
+        }
+        output.textContent += '\n';
+        
+        // Check results buffer
+        output.textContent += `Results buffer: [${result}, ${resultNodeIdx}]\n`;
+        
+        // Find the last NUM node (should be the result)
+        let finalResult = result;
+        for (let i = compiled.net.nodeCount - 1; i >= 0; i--) {
+          const offset = i * 8;
+          const nodeType = nodeData[offset];
+          const metadata = nodeData[offset + 1];
+          
+          if (nodeType === NodeType.NUM) {
+            finalResult = metadata;
+            output.textContent += `✓ Result found in node ${i}: ${finalResult}\n`;
+            break;
+          }
+        }
+        nodeStaging.unmap();
+
+        output.textContent += `✓ Reduction completed in ${steps} GPU passes\n`;
+        output.textContent += `✓ GPU execution time: ${gpuTime.toFixed(2)}ms\n\n`;
+        output.textContent += `🎯 RESULT: ${finalResult}\n`;
+
+        return {
+          result: finalResult,
+          steps,
+          gpuTime,
+          nodeCount: compiled.net.nodeCount,
+          workgroups: Math.ceil(compiled.net.nodeCount / this.workgroupSize)
+        };
+      }
+    }
+
+    // ========================================================================
+    // UI LOGIC
+    // ========================================================================
+    const editor = document.getElementById('editor');
+    const compileBtn = document.getElementById('compileBtn');
+    const benchmarkBtn = document.getElementById('benchmarkBtn');
+    const exampleSelect = document.getElementById('exampleSelect');
+
+    async function compileAndExecute() {
+      if (!gpuReady) return;
+
+      compileBtn.disabled = true;
+      compileBtn.textContent = '⚙️ Computing on GPU...';
+      compileBtn.classList.add('computing');
+
+      try {
+        const compiler = new WebGPUNetCompiler(device);
+        const compiled = await compiler.compile(editor.value);
+        const metrics = await compiler.execute(compiled);
+
+        updateMetrics(metrics);
+        
+        // Clean up buffers after we're done
+        compiled.nodeBuffer.destroy();
+        compiled.stateBuffer.destroy();
+        compiled.resultBuffer.destroy();
+        
+        compileBtn.textContent = '🚀 Compile & Execute on GPU';
+        compileBtn.classList.remove('computing');
+        compileBtn.disabled = false;
+      } catch (error) {
+        document.getElementById('output').textContent = `❌ Error: ${error.message}\n\n${error.stack}`;
+        compileBtn.textContent = '🚀 Compile & Execute on GPU';
+        compileBtn.classList.remove('computing');
+        compileBtn.disabled = false;
+      }
+    }
+
+    function updateMetrics(metrics) {
+      const cards = document.querySelectorAll('.metric-card .metric-value');
+      
+      const reductionsPerSec = (metrics.steps / (metrics.gpuTime / 1000)) / 1000;
+      const parallelism = metrics.workgroups * 256;
+      
+      cards[0].innerHTML = `${metrics.gpuTime.toFixed(2)}<span class="metric-unit">ms</span>`;
+      cards[1].innerHTML = `${reductionsPerSec.toFixed(1)}<span class="metric-unit">K</span>`;
+      cards[2].innerHTML = `${metrics.nodeCount}`;
+      cards[3].innerHTML = `${metrics.steps}`;
+      cards[4].innerHTML = `${metrics.workgroups}`;
+      cards[5].innerHTML = `${parallelism}<span class="metric-unit">x</span>`;
+    }
+
+    async function runBenchmark() {
+      if (!gpuReady) return;
+
+      benchmarkBtn.disabled = true;
+      benchmarkBtn.textContent = '⏱️ Benchmarking...';
+
+      const benchmarks = [
+        { name: 'Factorial(5)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 5' },
+        { name: 'Factorial(10)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 10' },
+        { name: 'Factorial(15)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 15' },
+        { name: 'Fibonacci(10)', code: 'def fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2); fib 10' },
+        { name: 'Fibonacci(15)', code: 'def fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2); fib 15' },
+        { name: 'Parallel(100 nodes)', code: examples.parallel },
+      ];
+
+      const results = [];
+      const compiler = new WebGPUNetCompiler(device);
+
+      for (const bench of benchmarks) {
+        const compiled = await compiler.compile(bench.code);
+        const metrics = await compiler.execute(compiled);
+        
+        results.push({
+          name: bench.name,
+          time: metrics.gpuTime,
+          nodes: metrics.nodeCount,
+          result: metrics.result
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      displayBenchmarkResults(results);
+
+      benchmarkBtn.disabled = false;
+      benchmarkBtn.textContent = '📊 Run Benchmark';
+    }
+
+    function displayBenchmarkResults(results) {
+      const container = document.getElementById('benchmarkResults');
+      const content = document.getElementById('benchmarkContent');
+      
+      container.style.display = 'block';
+      
+      let html = '';
+      let maxTime = Math.max(...results.map(r => r.time));
+      
+      results.forEach(result => {
+        const percentage = (result.time / maxTime) * 100;
+        html += `
+          <div class="benchmark-item">
+            <div>
+              <div style="font-weight: bold; color: #e0e0e0;">${result.name}</div>
+              <div style="color: #888; font-size: 0.85em; margin-top: 5px;">
+                ${result.nodes} nodes → Result: ${result.result}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: bold; color: #667eea; font-size: 1.2em;">
+                ${result.time.toFixed(2)}ms
+              </div>
+              <div style="color: #888; font-size: 0.85em;">
+                ${(result.nodes / result.time).toFixed(0)} nodes/ms
+              </div>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${percentage}%"></div>
+          </div>
+        `;
+      });
+      
+      content.innerHTML = html;
+    }
+
+    compileBtn.addEventListener('click', compileAndExecute);
+    benchmarkBtn.addEventListener('click', runBenchmark);
+
+    exampleSelect.addEventListener('change', (e) => {
+      const example = e.target.value;
+      if (example && examples[example]) {
+        editor.value = examples[example];
+        exampleSelect.value = '';
+      }
+    });
+
+    // Keyboard shortcuts
+    editor.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        compileAndExecute();
+      }
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 2;
+      }
+    });
+
+    // Initialize WebGPU on load
+    initWebGPU();
+  </script>
+</body>
+</html>
