@@ -12,51 +12,183 @@
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: linear-gradient(135deg, #0a0e27, #1a1d3e, #0f1729);
-      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: #00ff88;
       min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 20px;
     }
 
+    .background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #0a0033 0%, #000000 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      background: #00ff88;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .particle.electron {
+      width: 8px;
+      height: 8px;
+      box-shadow: 0 0 20px #00ff88;
+    }
+
     .container {
+      position: relative;
+      z-index: 1;
       max-width: 1600px;
       margin: 0 auto;
+      padding: 20px;
     }
 
     header {
       text-align: center;
       margin-bottom: 30px;
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(102, 126, 234, 0.2);
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    .logo-container {
+      margin-bottom: 60px;
+      position: relative;
+    }
+
+    .nucleus {
+      display: inline-block;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-size: 5em;
+      font-weight: bold;
+      letter-spacing: 3px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .electron-b, .electron-d {
+      color: #00ccff;
+      display: inline-block;
+      animation: electronGlow 2s ease-in-out infinite;
+      text-shadow: 0 0 30px #00ccff;
+    }
+
+    .electron-b {
+      animation-delay: 0s;
+    }
+
+    .electron-d {
+      animation-delay: 1s;
+    }
+
+    .energy-nucleus {
+      color: #ff00ff;
+      display: inline-block;
+      animation: nucleusGlow 3s ease-in-out infinite;
+      text-shadow: 0 0 40px #ff00ff, 0 0 60px #ff00ff;
+      font-size: 1.2em;
+    }
+
+    .script-text {
+      color: #00ff88;
+      display: inline-block;
+    }
+
+    .orbit-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .orbit {
+      position: absolute;
+      border: 2px solid rgba(0, 204, 255, 0.3);
+      border-radius: 50%;
+      animation: rotate 20s linear infinite;
+    }
+
+    .orbit-1 {
+      width: 400px;
+      height: 400px;
+      margin-left: -200px;
+      margin-top: -200px;
+    }
+
+    .orbit-2 {
+      width: 500px;
+      height: 500px;
+      margin-left: -250px;
+      margin-top: -250px;
+      animation-duration: 25s;
+      animation-direction: reverse;
+    }
+
+    .powered-by {
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #666;
+      letter-spacing: 2px;
+    }
+
+    .powered-by a {
+      color: #00ff88;
+      text-decoration: none;
+      font-size: 1.3em;
+      font-weight: bold;
+      letter-spacing: 3px;
+      transition: all 0.3s ease;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+    }
+
+    .powered-by a:hover {
+      color: #00ccff;
+      text-shadow: 0 0 30px rgba(0, 204, 255, 0.8);
+      letter-spacing: 5px;
     }
 
     h1 {
       font-size: 3em;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      background: linear-gradient(135deg, #00ccff 0%, #ff00ff 50%, #00ff88 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       margin-bottom: 10px;
+      text-shadow: 0 0 30px rgba(0, 204, 255, 0.5);
     }
 
     .gpu-badge {
       display: inline-block;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: linear-gradient(135deg, #ff00ff, #00ccff);
       padding: 8px 16px;
       border-radius: 20px;
       font-size: 0.9em;
       font-weight: bold;
       margin-top: 10px;
+      box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
     }
 
     .subtitle {
-      color: #a0a0a0;
+      color: #88ccff;
       font-size: 1.2em;
       margin-top: 10px;
+      text-shadow: 0 0 20px rgba(136, 204, 255, 0.5);
     }
 
     .controls {
@@ -68,8 +200,8 @@
     }
 
     button {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: linear-gradient(135deg, #ff00ff, #ff0088);
+      color: #fff;
       border: none;
       padding: 14px 28px;
       border-radius: 10px;
@@ -77,12 +209,15 @@
       cursor: pointer;
       transition: all 0.3s ease;
       font-weight: 600;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 5px 30px rgba(255, 0, 255, 0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5);
+      transform: scale(1.1);
+      box-shadow: 0 10px 50px rgba(255, 0, 255, 0.6);
+      background: linear-gradient(135deg, #ff0088, #ff00ff);
     }
 
     button:disabled {
@@ -91,8 +226,9 @@
     }
 
     button.secondary {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 20, 40, 0.5);
       box-shadow: none;
+      border: 1px solid rgba(0, 255, 136, 0.3);
     }
 
     .workspace {
@@ -103,30 +239,45 @@
     }
 
     .panel {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
+      background: rgba(10, 0, 30, 0.7);
+      border-radius: 15px;
       padding: 25px;
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255, 0, 255, 0.1), transparent);
+      transform: rotate(45deg);
+      animation: shimmer 3s infinite;
     }
 
     .panel h2 {
-      color: #667eea;
+      color: #00ccff;
       margin-bottom: 20px;
       font-size: 1.4em;
       display: flex;
       align-items: center;
       gap: 10px;
+      text-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
     }
 
     textarea, .output {
       width: 100%;
       min-height: 400px;
       background: #0d1117;
-      border: 1px solid rgba(102, 126, 234, 0.3);
+      border: 2px solid rgba(0, 255, 136, 0.3);
       border-radius: 10px;
       padding: 20px;
-      color: #e0e0e0;
+      color: #00ff88;
       font-family: 'Consolas', 'Monaco', monospace;
       font-size: 14px;
       line-height: 1.8;
@@ -135,8 +286,8 @@
 
     textarea:focus {
       outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+      border-color: #00ccff;
+      box-shadow: 0 0 0 3px rgba(0, 204, 255, 0.15);
     }
 
     .output {
@@ -153,10 +304,10 @@
     }
 
     .metric-card {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+      background: linear-gradient(135deg, rgba(0, 204, 255, 0.15), rgba(255, 0, 255, 0.15));
       padding: 20px;
       border-radius: 12px;
-      border: 1px solid rgba(102, 126, 234, 0.3);
+      border: 1px solid rgba(0, 255, 136, 0.3);
       position: relative;
       overflow: hidden;
     }
@@ -168,11 +319,11 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+      background: linear-gradient(90deg, #00ccff, #ff00ff, #00ff88);
     }
 
     .metric-label {
-      color: #a0a0a0;
+      color: #88ccff;
       font-size: 0.85em;
       margin-bottom: 8px;
       text-transform: uppercase;
@@ -180,10 +331,11 @@
     }
 
     .metric-value {
-      color: #667eea;
+      color: #00ccff;
       font-size: 2em;
       font-weight: bold;
       font-family: 'Courier New', monospace;
+      text-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
     }
 
     .metric-unit {
@@ -203,33 +355,33 @@
     }
 
     .status.info {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: #93c5fd;
+      background: rgba(0, 204, 255, 0.1);
+      border: 1px solid rgba(0, 204, 255, 0.3);
+      color: #87ceeb;
     }
 
     .status.success {
-      background: rgba(34, 197, 94, 0.1);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #86efac;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      color: #00ff88;
     }
 
     .status.error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
+      background: rgba(255, 0, 255, 0.1);
+      border: 1px solid rgba(255, 0, 255, 0.3);
+      color: #ff69b4;
     }
 
     .status.warning {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: #fcd34d;
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.3);
+      color: #ffa500;
     }
 
     select {
-      background: rgba(255, 255, 255, 0.08);
-      color: #e0e0e0;
-      border: 1px solid rgba(102, 126, 234, 0.3);
+      background: rgba(0, 20, 40, 0.5);
+      color: #00ff88;
+      border: 1px solid rgba(0, 255, 136, 0.3);
       padding: 14px 18px;
       border-radius: 10px;
       font-size: 16px;
@@ -259,7 +411,7 @@
     .progress-bar {
       width: 100%;
       height: 6px;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 20, 40, 0.5);
       border-radius: 3px;
       overflow: hidden;
       margin-top: 10px;
@@ -267,9 +419,50 @@
 
     .progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #667eea, #764ba2);
+      background: linear-gradient(90deg, #00ccff, #ff00ff);
       transition: width 0.3s ease;
       border-radius: 3px;
+    }
+
+    @keyframes electronGlow {
+      0%, 100% {
+        transform: scale(1);
+        text-shadow: 0 0 20px #00ccff;
+      }
+      50% {
+        transform: scale(1.1);
+        text-shadow: 0 0 40px #00ccff, 0 0 60px #00ccff;
+      }
+    }
+
+    @keyframes nucleusGlow {
+      0%, 100% {
+        text-shadow: 0 0 30px #ff00ff, 0 0 50px #ff00ff;
+      }
+      50% {
+        text-shadow: 0 0 50px #ff00ff, 0 0 80px #ff00ff, 0 0 100px #ff00ff;
+      }
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.3;
+      }
+      50% {
+        transform: translateY(-100px) translateX(50px);
+        opacity: 1;
+      }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
     }
 
     @keyframes pulse {
@@ -288,28 +481,56 @@
     }
 
     .gpu-info {
-      background: rgba(102, 126, 234, 0.05);
+      background: rgba(0, 204, 255, 0.05);
       padding: 15px;
       border-radius: 8px;
       margin-top: 15px;
       font-size: 0.9em;
-      border-left: 3px solid #667eea;
+      border-left: 3px solid #00ccff;
+    }
+
+    .benchmark-results {
+      background: #0d1117;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      border: 1px solid rgba(0, 255, 136, 0.2);
     }
 
     code {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 20, 40, 0.5);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'Courier New', monospace;
+      color: #00ff88;
     }
   </style>
 </head>
 <body>
+  <div class="background" id="background"></div>
+
   <div class="container">
     <header>
+      <div class="logo-container">
+        <div class="orbit-container">
+          <div class="orbit orbit-1"></div>
+          <div class="orbit orbit-2"></div>
+        </div>
+
+        <div class="powered-by">
+          Powered by <a href="https://c-u-l8er.link" target="_blank">C U L8er</a>
+        </div>
+
+        <div class="nucleus">
+          <div class="logo">
+            <span class="electron-b">b</span><span class="energy-nucleus">EN</span><span class="electron-d">d</span><span class="script-text">Script</span>
+          </div>
+        </div>
+      </div>
+
       <h1>⚡ Zapp Language</h1>
-      <div class="gpu-badge">🚀 GPU-ACCELERATED COMPUTE</div>
       <p class="subtitle">Massively parallel interaction net reduction on the GPU</p>
+      <div class="gpu-badge">🚀 GPU-ACCELERATED COMPUTE</div>
     </header>
 
     <div id="status" class="status info">
@@ -1192,6 +1413,39 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     // Initialize WebGPU on load
     initWebGPU();
+
+    // ========================================================================
+    // BENDSCRIPT ANIMATIONS
+    // ========================================================================
+
+    // Create floating particles
+    function createParticles() {
+      const background = document.getElementById('background');
+
+      for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle electron';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animation = `float ${5 + Math.random() * 10}s ease-in-out infinite`;
+        particle.style.animationDelay = Math.random() * 5 + 's';
+        background.appendChild(particle);
+      }
+    }
+
+    // Nucleus pulse effect
+    setInterval(() => {
+      const nucleus = document.querySelector('.energy-nucleus');
+      if (nucleus) {
+        nucleus.style.transform = `scale(${1 + Math.sin(Date.now() / 500) * 0.1})`;
+      }
+    }, 50);
+
+    createParticles();
   </script>
+
+  <div style="text-align: center; margin: 40px 0; z-index: 1; position: relative;">
+    <button onclick="window.location.href='https://bendscript.com'" class="secondary">EXIT ZAPP LANGUAGE</button>
+  </div>
 </body>
 </html>
