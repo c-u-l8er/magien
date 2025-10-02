@@ -307,7 +307,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>⚡ NEXUS WebGPU</h1>
+      <h1>⚡ Zapp Language</h1>
       <div class="gpu-badge">🚀 GPU-ACCELERATED COMPUTE</div>
       <p class="subtitle">Massively parallel interaction net reduction on the GPU</p>
     </header>
@@ -332,7 +332,7 @@
 
     <div class="workspace">
       <div class="panel">
-        <h2>📝 FLUX Source Code</h2>
+        <h2>📝 Zapp Source Code</h2>
         <textarea id="editor" placeholder="# Write FLUX code for GPU execution...">def factorial n = 
   if n == 0 
   then 1 
@@ -713,16 +713,10 @@ sum 50 + prod 5`
       createResultBuffer() {
         const buffer = this.device.createBuffer({
           size: 64,
-          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.MAP_READ,
-          mappedAtCreation: true,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
           label: 'Result Buffer'
         });
-        
-        // Initialize to zero
-        const data = new Int32Array(buffer.getMappedRange());
-        data.fill(0);
-        buffer.unmap();
-        
+
         console.log('Result buffer created:', buffer.label);
         return buffer;
       }
@@ -896,6 +890,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let bindGroup;
         try {
+          console.log('🔍 Validating buffers before bind group creation...');
+          console.log('Node buffer size:', compiled.nodeBuffer.size, 'usage:', compiled.nodeBuffer.usage);
+          console.log('State buffer size:', compiled.stateBuffer.size, 'usage:', compiled.stateBuffer.usage);
+          console.log('Result buffer size:', compiled.resultBuffer.size, 'usage:', compiled.resultBuffer.usage);
+
           bindGroup = device.createBindGroup({
             layout: compiled.pipeline.getBindGroupLayout(0),
             entries: [
@@ -908,6 +907,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
           console.log('✅ Bind group created successfully');
         } catch (error) {
           console.error('❌ Bind group creation failed:', error);
+          console.error('Error details:', error);
           output.textContent += `❌ Bind group error: ${error.message}\n`;
           throw error;
         }
