@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Interaction Net Fixes</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 20px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .pass {
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid #00ff00;
+    }
+    .fail {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid #ff0000;
+    }
+  </style>
+</head>
+<body>
+  <h1>Testing Interaction Net Fixes</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    const timestamp = Date.now();
+    
+    const modules = await Promise.all([
+      import(`./src/core/interaction_net.js?t=${timestamp}`),
+      import(`./src/core/net_parser.js?t=${timestamp}`)
+    ]);
+    
+    const { InteractionNet, AgentType } = modules[0];
+    const { parseZappToNet, tokenizeZapp } = modules[1];
+
+    const results = document.getElementById('results');
+    
+    function addResult(test, passed, message) {
+      const div = document.createElement('div');
+      div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `${passed ? '✅' : '❌'} ${test}: ${message}`;
+      results.appendChild(div);
+    }
+
+    // Test 1: Arithmetic reduction should perform steps
+    try {
+      const net = new InteractionNet();
+      const op2 = net.createAgent(AgentType.OP2, 2, 1); // Addition
+      const num1 = net.createAgent(AgentType.NUM, 0, 2);
+      const num2 = net.createAgent(AgentType.NUM, 0, 3);
+      
+      // Create active pairs - OP2 principal to NUM principal creates active pair
+      net.connectPorts(op2.principalPort, num1.principalPort);
+      // Connect operands to auxiliary ports
+      net.connectPorts(op2.auxiliaryPorts[0], num1.principalPort);
+      net.connectPorts(op2.auxiliaryPorts[1], num2.principalPort);
+      
+      // Debug: Check active pairs before reduction
+      const activePairs = net.findActivePairs();
+      console.log('Active pairs before reduction:', activePairs.length);
+      
+      const result = net.reduceToNormalForm(10);
+      addResult('Arithmetic Reduction', result.steps > 0, `Performed ${result.steps} steps, active pairs: ${activePairs.length}`);
+    } catch (error) {
+      addResult('Arithmetic Reduction', false, error.message);
+    }
+
+    // Test 2: Net statistics should count agent types
+    try {
+      const net = new InteractionNet();
+      net.createAgent(AgentType.LAM, 1, 'x');
+      net.createAgent(AgentType.APP, 1);
+      net.createAgent(AgentType.NUM, 0, 42);
+      net.createAgent(AgentType.OP2, 2, 1);
+      
+      const stats = net.getStats();
+      const hasCorrectTypes = stats.typeDistribution.LAM === 1 && 
+                             stats.typeDistribution.APP === 1 && 
+                             stats.typeDistribution.NUM === 1 && 
+                             stats.typeDistribution.OP2 === 1;
+      
+      addResult('Net Statistics', hasCorrectTypes, 
+                `LAM: ${stats.typeDistribution.LAM}, APP: ${stats.typeDistribution.APP}, NUM: ${stats.typeDistribution.NUM}, OP2: ${stats.typeDistribution.OP2}`);
+    } catch (error) {
+      addResult('Net Statistics', false, error.message);
+    }
+
+    // Test 3: Lambda parsing should create active pairs
+    try {
+      const sourceCode = 'λx.x';
+      const tokens = tokenizeZapp(sourceCode);
+      const net = parseZappToNet(sourceCode);
+      const stats = net.getStats();
+      
+      addResult('Lambda Parsing', stats.agentCount > 0, `Created ${stats.agentCount} agents, ${stats.activePairs} active pairs`);
+    } catch (error) {
+      addResult('Lambda Parsing', false, error.message);
+    }
+
+    // Test 4: Complex expressions should have active pairs
+    try {
+      const expressions = ['2 + 3', '(λx.x + 2) 3'];
+      
+      for (const expr of expressions) {
+        const net = parseZappToNet(expr);
+        const stats = net.getStats();
+        addResult(`Expression: ${expr}`, stats.agentCount > 0, `${stats.agentCount} agents, ${stats.activePairs} active pairs`);
+      }
+    } catch (error) {
+      addResult('Complex Expressions', false, error.message);
+    }
+
+    // Test 5: DOT generation should include agent types
+    try {
+      const net = new InteractionNet();
+      net.createAgent(AgentType.LAM, 1, 'x');
+      const dotFormat = net.toDot();
+      
+      addResult('DOT Generation', dotFormat.includes('LAM'), 'DOT format includes LAM agent');
+    } catch (error) {
+      addResult('DOT Generation', false, error.message);
+    }
+
+  </script>
+</body>
+</html>

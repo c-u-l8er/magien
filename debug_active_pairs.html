@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Active Pairs</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 20px;
+    }
+    .debug {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Debug Active Pair Detection</h1>
+  <div id="debug"></div>
+
+  <script type="module">
+    const timestamp = Date.now();
+    
+    const modules = await Promise.all([
+      import(`./src/core/interaction_net.js?t=${timestamp}`)
+    ]);
+    
+    const { InteractionNet, AgentType, PortType } = modules[0];
+
+    const debug = document.getElementById('debug');
+    
+    function addDebug(message) {
+      const div = document.createElement('div');
+      div.className = 'debug';
+      div.textContent = message;
+      debug.appendChild(div);
+    }
+
+    // Test active pair detection step by step
+    addDebug('Creating interaction net...');
+    const net = new InteractionNet();
+    
+    addDebug('Creating agents...');
+    const op2 = net.createAgent(AgentType.OP2, 2, 1); // Addition
+    const num1 = net.createAgent(AgentType.NUM, 0, 2);
+    const num2 = net.createAgent(AgentType.NUM, 0, 3);
+    
+    addDebug(`Created agents: OP2(${op2.id}), NUM1(${num1.id}), NUM2(${num2.id})`);
+    
+    addDebug('Checking initial state...');
+    let activePairs = net.findActivePairs();
+    addDebug(`Initial active pairs: ${activePairs.length}`);
+    
+    addDebug('Connecting OP2 principal to NUM1 principal...');
+    net.connectPorts(op2.principalPort, num1.principalPort);
+    
+    addDebug('Checking after first connection...');
+    activePairs = net.findActivePairs();
+    addDebug(`Active pairs after first connection: ${activePairs.length}`);
+    
+    if (activePairs.length > 0) {
+      const pair = activePairs[0];
+      addDebug(`Active pair: ${AgentType[pair.agent1.type]}(${pair.agent1.id}) <-> ${AgentType[pair.agent2.type]}(${pair.agent2.id})`);
+      addDebug(`Port types: ${pair.agent1.principalPort.type} <-> ${pair.agent2.principalPort.type}`);
+    }
+    
+    addDebug('Connecting operands to auxiliary ports...');
+    net.connectPorts(op2.auxiliaryPorts[0], num1.principalPort);
+    net.connectPorts(op2.auxiliaryPorts[1], num2.principalPort);
+    
+    addDebug('Checking after all connections...');
+    activePairs = net.findActivePairs();
+    addDebug(`Final active pairs: ${activePairs.length}`);
+    
+    addDebug('Attempting reduction...');
+    const result = net.reduceToNormalForm(5);
+    addDebug(`Reduction result: ${result.steps} steps, normal form: ${result.normalForm}`);
+    
+    addDebug('Final net state:');
+    const stats = net.getStats();
+    addDebug(`Agents: ${stats.agentCount}, Active pairs: ${stats.activePairs}`);
+    
+    addDebug('Agent type distribution:');
+    Object.entries(stats.typeDistribution).forEach(([type, count]) => {
+      if (count > 0) {
+        addDebug(`  ${type}: ${count}`);
+      }
+    });
+
+  </script>
+</body>
+</html>

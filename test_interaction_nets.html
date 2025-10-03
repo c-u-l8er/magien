@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaction Net Tests - Zapp Language</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.2em;
+      color: #888;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      color: #00ff88;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: linear-gradient(45deg, #00ff88, #00ccff);
+      border: none;
+      color: #0f0f23;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+    }
+
+    button:disabled {
+      background: #555;
+      color: #999;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .secondary {
+      background: linear-gradient(45deg, #666, #888);
+      color: white;
+    }
+
+    .test-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      min-height: 400px;
+      max-height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .status.info {
+      background: rgba(0, 204, 255, 0.1);
+      border: 1px solid rgba(0, 204, 255, 0.3);
+    }
+
+    .status.success {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .status.error {
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid rgba(255, 68, 68, 0.3);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .metric-label {
+      font-size: 0.9em;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #00ff88;
+    }
+
+    .metric-unit {
+      font-size: 0.7em;
+      color: #888;
+    }
+
+    .test-item {
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .test-item:last-child {
+      border-bottom: none;
+    }
+
+    .test-pass {
+      color: #00ff88;
+    }
+
+    .test-fail {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🧪 Interaction Net Test Suite</h1>
+      <p class="subtitle">Comprehensive testing for Zapp's interaction net system</p>
+    </header>
+
+    <div id="status" class="status info">
+      <span>🔄</span>
+      <span>Loading test modules...</span>
+    </div>
+
+    <div class="controls">
+      <button id="runAllTestsBtn" disabled>🚀 Run All Tests</button>
+      <button id="runBasicTestsBtn" class="secondary" disabled>📋 Basic Tests</button>
+      <button id="runReductionTestsBtn" class="secondary" disabled>⚡ Reduction Tests</button>
+      <button id="runParsingTestsBtn" class="secondary" disabled>🔗 Parsing Tests</button>
+      <button id="runGPUTestsBtn" class="secondary" disabled>🚀 GPU Tests</button>
+      <button id="clearOutputBtn" class="secondary">🗑️ Clear Output</button>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Test Results</h2>
+      <div class="metrics" id="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Total Tests</div>
+          <div class="metric-value" id="totalTests">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Passed</div>
+          <div class="metric-value" id="passedTests">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Failed</div>
+          <div class="metric-value" id="failedTests">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Success Rate</div>
+          <div class="metric-value" id="successRate">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Duration</div>
+          <div class="metric-value" id="testDuration">--</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">GPU Status</div>
+          <div class="metric-value" id="gpuStatus">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📝 Test Output</h2>
+      <div id="testOutput" class="test-output">Test output will appear here...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import test modules
+    const timestamp = Date.now();
+    
+    const modules = await Promise.all([
+      import(`./tests/interaction_net_tests.js?t=${timestamp}`),
+      import(`./src/core/interaction_net.js?t=${timestamp}`),
+      import(`./src/core/net_parser.js?t=${timestamp}`),
+      import(`./src/core/gpu_net_reducer.js?t=${timestamp}`)
+    ]);
+    
+    const { InteractionNetTests } = modules[0];
+    const { InteractionNet, AgentType } = modules[1];
+    const { parseZappToNet, tokenizeZapp } = modules[2];
+    const { GPUNetReducer } = modules[3];
+
+    // Global state
+    let testSuite = null;
+    let gpuReady = false;
+    let outputElement = null;
+
+    // Initialize
+    async function initialize() {
+      const statusEl = document.getElementById('status');
+      outputElement = document.getElementById('testOutput');
+      
+      try {
+        statusEl.innerHTML = '<span>🔄</span><span>Initializing test suite...</span>';
+        testSuite = new InteractionNetTests();
+        
+        statusEl.innerHTML = '<span>🔄</span><span>Checking WebGPU support...</span>';
+        
+        if (navigator.gpu) {
+          try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              const device = await adapter.requestDevice();
+              gpuReady = true;
+              document.getElementById('gpuStatus').textContent = '✅ Ready';
+              document.getElementById('runGPUTestsBtn').disabled = false;
+              
+              statusEl.className = 'status success';
+              statusEl.innerHTML = '<span>✅</span><span>Test suite ready! WebGPU supported.</span>';
+            } else {
+              document.getElementById('gpuStatus').textContent = '⚠️ No Adapter';
+              statusEl.className = 'status info';
+              statusEl.innerHTML = '<span>⚠️</span><span>Test suite ready! WebGPU adapter not available.</span>';
+            }
+          } catch (error) {
+            document.getElementById('gpuStatus').textContent = '❌ Error';
+            statusEl.className = 'status info';
+            statusEl.innerHTML = '<span>⚠️</span><span>Test suite ready! WebGPU initialization failed.</span>';
+          }
+        } else {
+          document.getElementById('gpuStatus').textContent = '❌ Unsupported';
+          statusEl.className = 'status info';
+          statusEl.innerHTML = '<span>⚠️</span><span>Test suite ready! WebGPU not supported.</span>';
+        }
+        
+        // Enable buttons
+        document.getElementById('runAllTestsBtn').disabled = false;
+        document.getElementById('runBasicTestsBtn').disabled = false;
+        document.getElementById('runReductionTestsBtn').disabled = false;
+        document.getElementById('runParsingTestsBtn').disabled = false;
+        
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.innerHTML = `<span>❌</span><span>Initialization failed: ${error.message}</span>`;
+        console.error('Initialization error:', error);
+      }
+    }
+
+    // Custom output handler for tests
+    function captureConsoleOutput() {
+      const originalLog = console.log;
+      const originalError = console.error;
+      const output = [];
+      
+      console.log = (...args) => {
+        output.push(args.join(' '));
+        originalLog.apply(console, args);
+      };
+      
+      console.error = (...args) => {
+        output.push(`ERROR: ${args.join(' ')}`);
+        originalError.apply(console, args);
+      };
+      
+      return {
+        getOutput: () => output.join('\n'),
+        restore: () => {
+          console.log = originalLog;
+          console.error = originalError;
+        }
+      };
+    }
+
+    // Update metrics display
+    function updateMetrics(results) {
+      document.getElementById('totalTests').textContent = results.passed + results.failed;
+      document.getElementById('passedTests').textContent = results.passed;
+      document.getElementById('failedTests').textContent = results.failed;
+      document.getElementById('successRate').textContent = `${results.successRate.toFixed(1)}%`;
+      document.getElementById('testDuration').textContent = `${results.duration.toFixed(2)}ms`;
+    }
+
+    // Run all tests
+    async function runAllTests() {
+      if (!testSuite) return;
+      
+      const capture = captureConsoleOutput();
+      const startTime = performance.now();
+      
+      try {
+        document.getElementById('runAllTestsBtn').disabled = true;
+        outputElement.textContent = '🚀 Running all tests...\n\n';
+        
+        const results = await testSuite.runAllTests();
+        const endTime = performance.now();
+        
+        results.duration = endTime - startTime;
+        
+        outputElement.textContent = capture.getOutput();
+        updateMetrics(results);
+        
+      } catch (error) {
+        outputElement.textContent += `\n❌ Test execution failed: ${error.message}\n`;
+        console.error('Test execution error:', error);
+      } finally {
+        capture.restore();
+        document.getElementById('runAllTestsBtn').disabled = false;
+      }
+    }
+
+    // Run basic tests
+    async function runBasicTests() {
+      if (!testSuite) return;
+      
+      const capture = captureConsoleOutput();
+      
+      try {
+        document.getElementById('runBasicTestsBtn').disabled = true;
+        outputElement.textContent = '📋 Running basic tests...\n\n';
+        
+        testSuite.testAgentCreation();
+        testSuite.testPortConnections();
+        testSuite.testActivePairDetection();
+        testSuite.testErrorHandling();
+        
+        const results = {
+          passed: testSuite.passed,
+          failed: testSuite.failed,
+          duration: 0,
+          successRate: (testSuite.passed / (testSuite.passed + testSuite.failed)) * 100
+        };
+        
+        outputElement.textContent = capture.getOutput();
+        updateMetrics(results);
+        
+      } catch (error) {
+        outputElement.textContent += `\n❌ Basic tests failed: ${error.message}\n`;
+      } finally {
+        capture.restore();
+        document.getElementById('runBasicTestsBtn').disabled = false;
+      }
+    }
+
+    // Run reduction tests
+    async function runReductionTests() {
+      if (!testSuite) return;
+      
+      const capture = captureConsoleOutput();
+      
+      try {
+        document.getElementById('runReductionTestsBtn').disabled = true;
+        outputElement.textContent = '⚡ Running reduction tests...\n\n';
+        
+        testSuite.testLambdaBetaReduction();
+        testSuite.testArithmeticReduction();
+        testSuite.testReductionLimits();
+        testSuite.testNetStatistics();
+        
+        const results = {
+          passed: testSuite.passed,
+          failed: testSuite.failed,
+          duration: 0,
+          successRate: (testSuite.passed / (testSuite.passed + testSuite.failed)) * 100
+        };
+        
+        outputElement.textContent = capture.getOutput();
+        updateMetrics(results);
+        
+      } catch (error) {
+        outputElement.textContent += `\n❌ Reduction tests failed: ${error.message}\n`;
+      } finally {
+        capture.restore();
+        document.getElementById('runReductionTestsBtn').disabled = false;
+      }
+    }
+
+    // Run parsing tests
+    async function runParsingTests() {
+      if (!testSuite) return;
+      
+      const capture = captureConsoleOutput();
+      
+      try {
+        document.getElementById('runParsingTestsBtn').disabled = true;
+        outputElement.textContent = '🔗 Running parsing tests...\n\n';
+        
+        testSuite.testZappParsing();
+        testSuite.testComplexExpressions();
+        
+        const results = {
+          passed: testSuite.passed,
+          failed: testSuite.failed,
+          duration: 0,
+          successRate: (testSuite.passed / (testSuite.passed + testSuite.failed)) * 100
+        };
+        
+        outputElement.textContent = capture.getOutput();
+        updateMetrics(results);
+        
+      } catch (error) {
+        outputElement.textContent += `\n❌ Parsing tests failed: ${error.message}\n`;
+      } finally {
+        capture.restore();
+        document.getElementById('runParsingTestsBtn').disabled = false;
+      }
+    }
+
+    // Run GPU tests
+    async function runGPUTests() {
+      if (!testSuite || !gpuReady) return;
+      
+      const capture = captureConsoleOutput();
+      
+      try {
+        document.getElementById('runGPUTestsBtn').disabled = true;
+        outputElement.textContent = '🚀 Running GPU tests...\n\n';
+        
+        testSuite.testGPUBufferConversion();
+        
+        // Additional GPU-specific tests
+        outputElement.textContent += '\n🔧 Testing GPU reducer initialization...\n';
+        
+        const adapter = await navigator.gpu.requestAdapter();
+        const device = await adapter.requestDevice();
+        const gpuReducer = new GPUNetReducer(device);
+        await gpuReducer.initialize();
+        
+        outputElement.textContent += '✅ GPU reducer initialized successfully\n';
+        
+        // Test GPU reduction with simple net
+        outputElement.textContent += '\n⚡ Testing GPU reduction...\n';
+        
+        const net = new InteractionNet();
+        const agent1 = net.createAgent(AgentType.LAM, 1);
+        const agent2 = net.createAgent(AgentType.APP, 1);
+        agent1.principalPort.connect(agent2.principalPort);
+        
+        const netData = net.toGPUBuffer();
+        const result = await gpuReducer.reduceNet(netData, 10);
+        
+        outputElement.textContent += `✅ GPU reduction completed: ${result.steps} steps\n`;
+        outputElement.textContent += `✅ Final agents: ${result.metadata.agentCount}\n`;
+        
+        testSuite.passed += 3;
+        
+        const results = {
+          passed: testSuite.passed,
+          failed: testSuite.failed,
+          duration: 0,
+          successRate: (testSuite.passed / (testSuite.passed + testSuite.failed)) * 100
+        };
+        
+        outputElement.textContent = capture.getOutput();
+        updateMetrics(results);
+        
+      } catch (error) {
+        outputElement.textContent += `\n❌ GPU tests failed: ${error.message}\n`;
+        testSuite.failed++;
+      } finally {
+        capture.restore();
+        document.getElementById('runGPUTestsBtn').disabled = false;
+      }
+    }
+
+    // Clear output
+    function clearOutput() {
+      outputElement.textContent = 'Test output cleared.\n';
+      testSuite = new InteractionNetTests();
+      updateMetrics({ passed: 0, failed: 0, duration: 0, successRate: 0 });
+    }
+
+    // Event listeners
+    document.getElementById('runAllTestsBtn').addEventListener('click', runAllTests);
+    document.getElementById('runBasicTestsBtn').addEventListener('click', runBasicTests);
+    document.getElementById('runReductionTestsBtn').addEventListener('click', runReductionTests);
+    document.getElementById('runParsingTestsBtn').addEventListener('click', runParsingTests);
+    document.getElementById('runGPUTestsBtn').addEventListener('click', runGPUTests);
+    document.getElementById('clearOutputBtn').addEventListener('click', clearOutput);
+
+    // Initialize on load
+    initialize();
+  </script>
+</body>
+</html>

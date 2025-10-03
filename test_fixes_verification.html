@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Test Fixes</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verify Test Fixes</h1>
+        
+        <div class="test-section">
+            <h2>Arithmetic Reduction Test</h2>
+            <button onclick="testArithmeticReduction()">Run Test</button>
+            <div id="arithmetic-output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Net Statistics Test</h2>
+            <button onclick="testNetStatistics()">Run Test</button>
+            <div id="statistics-output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>DOT Generation Test</h2>
+            <button onclick="testDotGeneration()">Run Test</button>
+            <div id="dot-output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Run All Tests</h2>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="all-output" class="test-output"></div>
+        </div>
+        
+        <div class="summary" id="summary">
+            <h3>Test Summary</h3>
+            <div id="summary-content">Click "Run All Tests" to see the summary.</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, Agent, AgentType, PortType } from './src/core/interaction_net.js';
+        
+        let testResults = {
+            arithmetic: { passed: 0, failed: 0, total: 0 },
+            statistics: { passed: 0, failed: 0, total: 0 },
+            dot: { passed: 0, failed: 0, total: 0 }
+        };
+        
+        function updateTestResult(testName, passed, failed, total) {
+            testResults[testName] = { passed, failed, total };
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            const totalPassed = Object.values(testResults).reduce((sum, result) => sum + result.passed, 0);
+            const totalFailed = Object.values(testResults).reduce((sum, result) => sum + result.failed, 0);
+            const totalTests = Object.values(testResults).reduce((sum, result) => sum + result.total, 0);
+            const successRate = totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : 0;
+            
+            const summaryContent = document.getElementById('summary-content');
+            summaryContent.innerHTML = `
+                <div><strong>Total Tests:</strong> ${totalTests}</div>
+                <div class="pass"><strong>Passed:</strong> ${totalPassed}</div>
+                <div class="fail"><strong>Failed:</strong> ${totalFailed}</div>
+                <div><strong>Success Rate:</strong> ${successRate}%</div>
+            `;
+        }
+        
+        window.testArithmeticReduction = function() {
+            const output = document.getElementById('arithmetic-output');
+            output.innerHTML = 'Running arithmetic reduction test...\n\n';
+            
+            let passed = 0;
+            let failed = 0;
+            let total = 0;
+            
+            try {
+                // Test 1: Basic arithmetic reduction
+                total++;
+                const net = new InteractionNet();
+                
+                // Create 2 + 3 structure
+                const op2 = net.createAgent(AgentType.OP2, 2, 1); // Addition operator
+                const num1 = net.createAgent(AgentType.NUM, 0, 2);
+                const num2 = net.createAgent(AgentType.NUM, 0, 3);
+                
+                // Connect operation to numbers
+                op2.auxiliaryPorts[0].connect(num1.principalPort);
+                op2.auxiliaryPorts[1].connect(num2.principalPort);
+                
+                // Perform reduction
+                const result = net.reduceToNormalForm(10);
+                
+                if (result.steps > 0) {
+                    output.innerHTML += '✓ PASS: Should perform reduction steps\n';
+                    output.innerHTML += `  Steps: ${result.steps}, Result: ${result.normalForm ? 'Normal form' : 'Not normal form'}\n`;
+                    passed++;
+                } else {
+                    output.innerHTML += '✗ FAIL: Should perform reduction steps\n';
+                    failed++;
+                }
+                
+                // Test 2: Verify correct result
+                total++;
+                if (net.agents.size === 1) {
+                    const resultAgent = Array.from(net.agents.values())[0];
+                    if (resultAgent.type === AgentType.NUM && resultAgent.data === 5) {
+                        output.innerHTML += '✓ PASS: Should produce correct result (2 + 3 = 5)\n';
+                        passed++;
+                    } else {
+                        output.innerHTML += `✗ FAIL: Expected NUM(5), got ${resultAgent.type}(${resultAgent.data})\n`;
+                        failed++;
+                    }
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 1 agent, got ${net.agents.size}\n`;
+                    failed++;
+                }
+                
+                // Test 3: Test subtraction
+                total++;
+                const net2 = new InteractionNet();
+                const op2Sub = net2.createAgent(AgentType.OP2, 2, 2); // Subtraction operator
+                const num3 = net2.createAgent(AgentType.NUM, 0, 7);
+                const num4 = net2.createAgent(AgentType.NUM, 0, 3);
+                
+                op2Sub.auxiliaryPorts[0].connect(num3.principalPort);
+                op2Sub.auxiliaryPorts[1].connect(num4.principalPort);
+                
+                const result2 = net2.reduceToNormalForm(10);
+                
+                if (result2.steps > 0 && net2.agents.size === 1) {
+                    const resultAgent2 = Array.from(net2.agents.values())[0];
+                    if (resultAgent2.type === AgentType.NUM && resultAgent2.data === 4) {
+                        output.innerHTML += '✓ PASS: Should handle subtraction (7 - 3 = 4)\n';
+                        passed++;
+                    } else {
+                        output.innerHTML += `✗ FAIL: Expected NUM(4), got ${resultAgent2.type}(${resultAgent2.data})\n`;
+                        failed++;
+                    }
+                } else {
+                    output.innerHTML += '✗ FAIL: Subtraction reduction failed\n';
+                    failed++;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `ERROR: ${error.message}\n`;
+                failed++;
+            }
+            
+            updateTestResult('arithmetic', passed, failed, total);
+        };
+        
+        window.testNetStatistics = function() {
+            const output = document.getElementById('statistics-output');
+            output.innerHTML = 'Running net statistics test...\n\n';
+            
+            let passed = 0;
+            let failed = 0;
+            let total = 0;
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create various agent types
+                const lam = net.createAgent(AgentType.LAM, 1);
+                const app = net.createAgent(AgentType.APP, 1);
+                const num = net.createAgent(AgentType.NUM, 0, 42);
+                const op2 = net.createAgent(AgentType.OP2, 2, 1);
+                
+                const stats = net.getStats();
+                
+                // Test 1: Agent count
+                total++;
+                if (stats.agentCount === 4) {
+                    output.innerHTML += '✓ PASS: Should count 4 agents\n';
+                    passed++;
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 4 agents, got ${stats.agentCount}\n`;
+                    failed++;
+                }
+                
+                // Test 2: LAM count
+                total++;
+                if (stats.typeDistribution.LAM === 1) {
+                    output.innerHTML += '✓ PASS: Should count 1 LAM agent\n';
+                    passed++;
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 1 LAM agent, got ${stats.typeDistribution.LAM}\n`;
+                    failed++;
+                }
+                
+                // Test 3: APP count
+                total++;
+                if (stats.typeDistribution.APP === 1) {
+                    output.innerHTML += '✓ PASS: Should count 1 APP agent\n';
+                    passed++;
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 1 APP agent, got ${stats.typeDistribution.APP}\n`;
+                    failed++;
+                }
+                
+                // Test 4: NUM count
+                total++;
+                if (stats.typeDistribution.NUM === 1) {
+                    output.innerHTML += '✓ PASS: Should count 1 NUM agent\n';
+                    passed++;
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 1 NUM agent, got ${stats.typeDistribution.NUM}\n`;
+                    failed++;
+                }
+                
+                // Test 5: OP2 count
+                total++;
+                if (stats.typeDistribution.OP2 === 1) {
+                    output.innerHTML += '✓ PASS: Should count 1 OP2 agent\n';
+                    passed++;
+                } else {
+                    output.innerHTML += `✗ FAIL: Expected 1 OP2 agent, got ${stats.typeDistribution.OP2}\n`;
+                    failed++;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `ERROR: ${error.message}\n`;
+                failed++;
+            }
+            
+            updateTestResult('statistics', passed, failed, total);
+        };
+        
+        window.testDotGeneration = function() {
+            const output = document.getElementById('dot-output');
+            output.innerHTML = 'Running DOT generation test...\n\n';
+            
+            let passed = 0;
+            let failed = 0;
+            let total = 0;
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create a LAM agent
+                const lam = net.createAgent(AgentType.LAM, 1, 'x');
+                
+                const dotFormat = net.toDot();
+                
+                // Test 1: Valid DOT format
+                total++;
+                if (dotFormat.includes('digraph')) {
+                    output.innerHTML += '✓ PASS: Should generate valid DOT format\n';
+                    passed++;
+                } else {
+                    output.innerHTML += '✗ FAIL: Should generate valid DOT format\n';
+                    failed++;
+                }
+                
+                // Test 2: Include LAM in DOT
+                total++;
+                if (dotFormat.includes('LAM')) {
+                    output.innerHTML += '✓ PASS: Should include LAM in DOT\n';
+                    passed++;
+                } else {
+                    output.innerHTML += '✗ FAIL: Should include LAM in DOT\n';
+                    failed++;
+                }
+                
+                // Test 3: Test with multiple agents
+                total++;
+                const app = net.createAgent(AgentType.APP, 1);
+                lam.principalPort.connect(app.principalPort);
+                
+                const dotFormat2 = net.toDot();
+                if (dotFormat2.includes('LAM') && dotFormat2.includes('APP')) {
+                    output.innerHTML += '✓ PASS: Should include multiple agent types\n';
+                    passed++;
+                } else {
+                    output.innerHTML += '✗ FAIL: Should include multiple agent types\n';
+                    failed++;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `ERROR: ${error.message}\n`;
+                failed++;
+            }
+            
+            updateTestResult('dot', passed, failed, total);
+        };
+        
+        window.runAllTests = function() {
+            const output = document.getElementById('all-output');
+            output.innerHTML = 'Running all tests...\n\n';
+            
+            // Reset results
+            testResults = {
+                arithmetic: { passed: 0, failed: 0, total: 0 },
+                statistics: { passed: 0, failed: 0, total: 0 },
+                dot: { passed: 0, failed: 0, total: 0 }
+            };
+            
+            // Run all tests
+            testArithmeticReduction();
+            testNetStatistics();
+            testDotGeneration();
+            
+            // Show summary
+            setTimeout(() => {
+                const totalPassed = Object.values(testResults).reduce((sum, result) => sum + result.passed, 0);
+                const totalFailed = Object.values(testResults).reduce((sum, result) => sum + result.failed, 0);
+                const totalTests = Object.values(testResults).reduce((sum, result) => sum + result.total, 0);
+                const successRate = totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : 0;
+                
+                output.innerHTML += `\n═══════════════════════════\n`;
+                output.innerHTML += `📊 Test Results:\n`;
+                output.innerHTML += `✅ Passed: ${totalPassed}\n`;
+                output.innerHTML += `❌ Failed: ${totalFailed}\n`;
+                output.innerHTML += `📈 Success Rate: ${successRate}%\n\n`;
+                
+                if (totalFailed === 0) {
+                    output.innerHTML += '🎉 All tests passed! The fixes are working correctly.\n';
+                } else {
+                    output.innerHTML += '⚠️  Some tests failed. Please review the implementation.\n';
+                }
+            }, 100);
+        };
+    </script>
+</body>
+</html>

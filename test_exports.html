@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Module Exports</title>
+</head>
+<body>
+    <h1>Testing Module Exports</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        // Test imports at top level
+        import { Lexer, Token, TokenType } from './src/core/lexer.js';
+        import { TypeChecker, Types } from './src/core/type_checker.js';
+        import { GPUAnalyzer } from './src/core/gpu_analyzer.js';
+        import { GPUCodeGenerator } from './src/core/gpu_codegen.js';
+        import { ActorRuntime } from './src/core/actor_system.js';
+
+        document.getElementById('output').textContent = 'Testing imports...';
+        
+        try {
+            document.getElementById('output').textContent += '\n✅ Lexer imports work';
+            document.getElementById('output').textContent += '\n✅ TypeChecker imports work';
+            document.getElementById('output').textContent += '\n✅ GPUAnalyzer imports work';
+            document.getElementById('output').textContent += '\n✅ GPUCodeGenerator imports work';
+            document.getElementById('output').textContent += '\n✅ ActorRuntime imports work';
+            
+            document.getElementById('output').textContent += '\n\n🎉 All imports successful!';
+            
+        } catch (error) {
+            document.getElementById('output').textContent = `❌ Import error: ${error.message}`;
+            console.error('Import error:', error);
+        }
+    </script>
+</body>
+</html>

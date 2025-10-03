@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test Failures</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Test Failures</h1>
+        
+        <div class="test-section">
+            <h2>Arithmetic Reduction Test</h2>
+            <button onclick="testArithmeticReduction()">Run Arithmetic Reduction Test</button>
+            <div id="arithmetic-output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Net Statistics Test</h2>
+            <button onclick="testNetStatistics()">Run Net Statistics Test</button>
+            <div id="statistics-output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>DOT Generation Test</h2>
+            <button onclick="testDotGeneration()">Run DOT Generation Test</button>
+            <div id="dot-output" class="test-output"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, Agent, AgentType, PortType } from './src/core/interaction_net.js';
+        
+        window.testArithmeticReduction = function() {
+            const output = document.getElementById('arithmetic-output');
+            output.innerHTML = 'Running arithmetic reduction test...\n\n';
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create 2 + 3 structure
+                const op2 = net.createAgent(AgentType.OP2, 2, 1); // Addition operator
+                const num1 = net.createAgent(AgentType.NUM, 0, 2);
+                const num2 = net.createAgent(AgentType.NUM, 0, 3);
+                
+                output.innerHTML += `Created OP2 agent: ${op2.id}, type: ${op2.type}, data: ${op2.data}\n`;
+                output.innerHTML += `Created NUM1 agent: ${num1.id}, type: ${num1.type}, data: ${num1.data}\n`;
+                output.innerHTML += `Created NUM2 agent: ${num2.id}, type: ${num2.type}, data: ${num2.data}\n\n`;
+                
+                // Connect operation to numbers
+                op2.auxiliaryPorts[0].connect(num1.principalPort);
+                op2.auxiliaryPorts[1].connect(num2.principalPort);
+                
+                output.innerHTML += 'Connected NUM agents to OP2 auxiliary ports\n\n';
+                
+                // Check for active pairs
+                const activePairs = net.findActivePairs();
+                output.innerHTML += `Found ${activePairs.length} active pairs\n\n`;
+                
+                // Perform reduction
+                const result = net.reduceToNormalForm(10);
+                
+                output.innerHTML += `Reduction result:\n`;
+                output.innerHTML += `- Steps: ${result.steps}\n`;
+                output.innerHTML += `- Normal form: ${result.normalForm}\n`;
+                output.innerHTML += `- Final agents: ${result.finalAgents}\n\n`;
+                
+                if (result.steps > 0) {
+                    output.innerHTML += '<span class="pass">TEST PASSED: Should perform reduction steps</span>\n';
+                } else {
+                    output.innerHTML += '<span class="fail">TEST FAILED: Should perform reduction steps</span>\n';
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<span class="fail">ERROR: ${error.message}</span>\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        window.testNetStatistics = function() {
+            const output = document.getElementById('statistics-output');
+            output.innerHTML = 'Running net statistics test...\n\n';
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create various agent types
+                const lam = net.createAgent(AgentType.LAM, 1);
+                const app = net.createAgent(AgentType.APP, 1);
+                const num = net.createAgent(AgentType.NUM, 0, 42);
+                const op2 = net.createAgent(AgentType.OP2, 2, 1);
+                
+                output.innerHTML += `Created LAM agent: ${lam.id}, type: ${lam.type}\n`;
+                output.innerHTML += `Created APP agent: ${app.id}, type: ${app.type}\n`;
+                output.innerHTML += `Created NUM agent: ${num.id}, type: ${num.type}\n`;
+                output.innerHTML += `Created OP2 agent: ${op2.id}, type: ${op2.type}\n\n`;
+                
+                const stats = net.getStats();
+                
+                output.innerHTML += `Agent count: ${stats.agentCount}\n`;
+                output.innerHTML += `Type distribution:\n`;
+                
+                for (const [type, count] of Object.entries(stats.typeDistribution)) {
+                    output.innerHTML += `- ${type}: ${count}\n`;
+                    
+                    if (type === 'LAM' && count === 1) {
+                        output.innerHTML += '  <span class="pass">✓ Should count 1 LAM agent</span>\n';
+                    } else if (type === 'LAM') {
+                        output.innerHTML += `  <span class="fail">✗ Should count 1 LAM agent, got ${count}</span>\n`;
+                    }
+                    
+                    if (type === 'APP' && count === 1) {
+                        output.innerHTML += '  <span class="pass">✓ Should count 1 APP agent</span>\n';
+                    } else if (type === 'APP') {
+                        output.innerHTML += `  <span class="fail">✗ Should count 1 APP agent, got ${count}</span>\n`;
+                    }
+                    
+                    if (type === 'NUM' && count === 1) {
+                        output.innerHTML += '  <span class="pass">✓ Should count 1 NUM agent</span>\n';
+                    } else if (type === 'NUM') {
+                        output.innerHTML += `  <span class="fail">✗ Should count 1 NUM agent, got ${count}</span>\n`;
+                    }
+                    
+                    if (type === 'OP2' && count === 1) {
+                        output.innerHTML += '  <span class="pass">✓ Should count 1 OP2 agent</span>\n';
+                    } else if (type === 'OP2') {
+                        output.innerHTML += `  <span class="fail">✗ Should count 1 OP2 agent, got ${count}</span>\n`;
+                    }
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<span class="fail">ERROR: ${error.message}</span>\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        window.testDotGeneration = function() {
+            const output = document.getElementById('dot-output');
+            output.innerHTML = 'Running DOT generation test...\n\n';
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create a LAM agent
+                const lam = net.createAgent(AgentType.LAM, 1, 'x');
+                
+                output.innerHTML += `Created LAM agent: ${lam.id}, type: ${lam.type}\n\n`;
+                
+                const dotFormat = net.toDot();
+                
+                output.innerHTML += 'Generated DOT format:\n';
+                output.innerHTML += dotFormat + '\n';
+                
+                if (dotFormat.includes('digraph')) {
+                    output.innerHTML += '<span class="pass">✓ Should generate valid DOT format</span>\n';
+                } else {
+                    output.innerHTML += '<span class="fail">✗ Should generate valid DOT format</span>\n';
+                }
+                
+                if (dotFormat.includes('LAM')) {
+                    output.innerHTML += '<span class="pass">✓ Should include LAM in DOT</span>\n';
+                } else {
+                    output.innerHTML += '<span class="fail">✗ Should include LAM in DOT</span>\n';
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<span class="fail">ERROR: ${error.message}</span>\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+    </script>
+</body>
+</html>
