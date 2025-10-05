@@ -274,6 +274,10 @@
             <div class="metric-label">GPU Ready</div>
             <div class="metric-value">--</div>
           </div>
+          <div class="metric-card" id="result-card">
+            <div class="metric-label">Result</div>
+            <div class="metric-value">--</div>
+          </div>
         </div>
       </div>
 
@@ -392,9 +396,16 @@ factorial 5`,
         if (activePairs.length > 0) {
           outputEl.textContent += '\nActive pairs:\n';
           activePairs.forEach((pair, i) => {
-            const type1 = AgentType[pair.agent1.type];
-            const type2 = AgentType[pair.agent2.type];
-            outputEl.textContent += `  ${i + 1}. ${type1} ↔ ${type2}\n`;
+            if (pair.type === 'arithmetic') {
+              const type1 = getAgentTypeName(pair.agent1.type);
+              const type2 = getAgentTypeName(pair.agent2.type);
+              const type3 = getAgentTypeName(pair.agent3.type);
+              outputEl.textContent += `  ${i + 1}. ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair.agent3.data}) [ARITHMETIC]\n`;
+            } else {
+              const type1 = getAgentTypeName(pair.agent1.type);
+              const type2 = getAgentTypeName(pair.agent2.type);
+              outputEl.textContent += `  ${i + 1}. ${type1} ↔ ${type2} [PRINCIPAL]\n`;
+            }
           });
         }
         
@@ -425,6 +436,12 @@ factorial 5`,
         outputEl.textContent += `✓ Normal form: ${result.normalForm ? 'Yes' : 'No'}\n`;
         outputEl.textContent += `✓ Final agents: ${result.finalAgents}\n`;
         outputEl.textContent += `✓ Total reductions: ${result.totalSteps}\n\n`;
+        
+        // Show computed result if available
+        const computedResult = getComputedResult(currentNet);
+        if (computedResult !== null) {
+          outputEl.textContent += `🎯 Computed Result: ${computedResult}\n\n`;
+        }
         
         // Show final net stats
         const finalStats = currentNet.getStats();
@@ -474,6 +491,12 @@ factorial 5`,
         currentNet = InteractionNet.fromGPUBuffer(result);
         updateMetrics(currentNet);
         
+        // Show computed result if available
+        const computedResult = getComputedResult(currentNet);
+        if (computedResult !== null) {
+          outputEl.textContent += `🎯 Computed Result: ${computedResult}\n\n`;
+        }
+        
         outputEl.textContent += '✅ GPU reduction completed\n';
         
       } catch (error) {
@@ -505,7 +528,7 @@ factorial 5`,
         visualization += '📋 Agents:\n';
         let agentIndex = 0;
         for (const agent of currentNet.agents.values()) {
-          const typeName = AgentType[agent.type];
+          const typeName = getAgentTypeName(agent.type);
           const dataStr = agent.data !== null ? `(${agent.data})` : '';
           visualization += `  ${agentIndex}: ${typeName}${dataStr}\n`;
           agentIndex++;
@@ -518,9 +541,10 @@ factorial 5`,
           agent.getAllPorts().forEach(port => {
             if (port.isConnected() && !connections.has(`${port.id}-${port.connectedTo.id}`)) {
               const connectedAgent = port.getConnectedAgent();
-              const agent1Name = AgentType[agent.type];
-              const agent2Name = AgentType[connectedAgent.type];
-              visualization += `  ${agent1Name} ↔ ${agent2Name}\n`;
+              const agent1Name = getAgentTypeName(agent.type);
+              const agent2Name = getAgentTypeName(connectedAgent.type);
+              const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
+              visualization += `  ${agent1Name}(${portType}) ↔ ${agent2Name}\n`;
               connections.add(`${port.id}-${port.connectedTo.id}`);
               connections.add(`${port.connectedTo.id}-${port.id}`);
             }
@@ -535,6 +559,12 @@ factorial 5`,
         visualization += `\n⚡ Active pairs: ${stats.activePairs}\n`;
         visualization += `🔄 Reduction steps: ${stats.reductionSteps}\n`;
         
+        // Add computed result if available
+        const computedResult = getComputedResult(currentNet);
+        if (computedResult !== null) {
+          visualization += `\n🎯 Computed Result: ${computedResult}\n`;
+        }
+        
         graphVizEl.textContent = visualization;
         
       } catch (error) {
@@ -547,12 +577,57 @@ factorial 5`,
       const stats = net.getStats();
       const cards = document.querySelectorAll('.metric-value');
       
+      // Calculate actual port count
+      let actualPortCount = 0;
+      for (const agent of net.agents.values()) {
+        actualPortCount += agent.getAllPorts().length;
+      }
+      
       cards[0].textContent = stats.agentCount;
-      cards[1].textContent = stats.agentCount * 2 + stats.agentCount * 3; // Approximate port count
+      cards[1].textContent = actualPortCount;
       cards[2].textContent = stats.activePairs;
       cards[3].textContent = stats.reductionSteps;
       cards[4].textContent = stats.activePairs === 0 ? '✅ Yes' : '❌ No';
       cards[5].textContent = gpuReady ? '✅ Yes' : '❌ No';
+      
+      // Update metrics labels to show type distribution
+      updateTypeDistribution(stats.typeDistribution);
+      
+      // Update computed result
+      const computedResult = getComputedResult(net);
+      const resultCard = document.getElementById('result-card');
+      if (resultCard) {
+        const resultValue = resultCard.querySelector('.metric-value');
+        if (computedResult !== null) {
+          resultValue.textContent = computedResult;
+          resultValue.style.color = '#00ff88';
+        } else {
+          resultValue.textContent = '--';
+          resultValue.style.color = '#888';
+        }
+      }
+    }
+    
+    // Update type distribution display
+    function updateTypeDistribution(typeDistribution) {
+      const metricsContainer = document.getElementById('metrics');
+      
+      // Remove existing type distribution cards if they exist
+      const existingTypeCards = metricsContainer.querySelectorAll('.type-distribution-card');
+      existingTypeCards.forEach(card => card.remove());
+      
+      // Add type distribution cards
+      Object.entries(typeDistribution).forEach(([type, count]) => {
+        if (count > 0) { // Only show types that exist
+          const typeCard = document.createElement('div');
+          typeCard.className = 'metric-card type-distribution-card';
+          typeCard.innerHTML = `
+            <div class="metric-label">${type}</div>
+            <div class="metric-value">${count}</div>
+          `;
+          metricsContainer.appendChild(typeCard);
+        }
+      });
     }
 
     // Event listeners
@@ -576,6 +651,42 @@ factorial 5`,
         parseToNet();
       }
     });
+
+    // Get computed result from reduced net
+    function getComputedResult(net) {
+      // If the net has been reduced to a single NUM agent, return its value
+      if (net.agents.size === 1) {
+        const agent = Array.from(net.agents.values())[0];
+        if (agent.type === AgentType.NUM) {
+          return agent.data;
+        }
+      }
+      
+      // If the net has a single NUM agent with no connections, return its value
+      for (const agent of net.agents.values()) {
+        if (agent.type === AgentType.NUM && !agent.isConnected()) {
+          return agent.data;
+        }
+      }
+      
+      // If there are multiple NUM agents, check if they represent a complex result
+      const numAgents = Array.from(net.agents.values()).filter(agent => agent.type === AgentType.NUM);
+      if (numAgents.length === 1) {
+        return numAgents[0].data;
+      }
+      
+      return null; // No clear computed result
+    }
+
+    // Helper function to get agent type name from numeric value
+    function getAgentTypeName(typeValue) {
+      for (const [key, value] of Object.entries(AgentType)) {
+        if (typeof value === 'number' && value === typeValue) {
+          return key;
+        }
+      }
+      return 'UNKNOWN';
+    }
 
     // Initialize on load
     initialize();

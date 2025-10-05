@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Factorial Parsing</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Factorial Parsing</h1>
+        
+        <button onclick="debugFactorial()">Debug Factorial</button>
+        <div id="output" class="test-output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType, PortType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+        
+        window.debugFactorial = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Debugging factorial parsing...\n\n';
+            
+            try {
+                // Tokenize
+                const sourceCode = `def factorial n = 
+  if n == 0 
+  then 1 
+  else n * factorial (n - 1)
+  
+factorial 5`;
+                output.innerHTML += `📝 Source:\n${sourceCode}\n\n`;
+                
+                const tokens = tokenizeZapp(sourceCode);
+                output.innerHTML += `✓ Generated ${tokens.length} tokens:\n`;
+                tokens.forEach((token, i) => {
+                    output.innerHTML += `  ${i}: type="${token.type}", value="${token.value}"\n`;
+                });
+                output.innerHTML += '\n';
+                
+                // Parse step by step
+                output.innerHTML += '🕸️ Parsing step by step...\n';
+                const parser = new NetParser();
+                
+                // Check what parseFunction does
+                output.innerHTML += '\nCalling parseFunction at index 0...\n';
+                const nextIndex = parser.parseFunction(tokens, 0);
+                output.innerHTML += `parseFunction returned index: ${nextIndex}\n`;
+                output.innerHTML += `Net now has ${parser.net.agents.size} agents\n\n`;
+                
+                // Continue parsing the rest
+                output.innerHTML += 'Continuing with remaining tokens...\n';
+                for (let i = nextIndex; i < tokens.length; i++) {
+                    const token = tokens[i];
+                    output.innerHTML += `Processing token ${i}: type="${token.type}", value="${token.value}"\n`;
+                    
+                    if (token.type === 'IDENTIFIER' && token.value === 'factorial') {
+                        output.innerHTML += '  Found factorial function call\n';
+                        // This should create a function call
+                        i = parser.parseExpression(tokens, i);
+                        output.innerHTML += `  After parseExpression, index is: ${i}\n`;
+                    } else {
+                        i++;
+                    }
+                }
+                
+                const net = parser.net;
+                output.innerHTML += `\n✓ Final net has ${net.agents.size} agents\n\n`;
+                
+                // Show agents
+                if (net.agents.size > 0) {
+                    output.innerHTML += '📋 Agents created:\n';
+                    for (const agent of net.agents.values()) {
+                        const typeName = getAgentTypeName(agent.type);
+                        const dataStr = agent.data !== null ? `(${agent.data})` : '';
+                        output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
+                    }
+                } else {
+                    output.innerHTML += '❌ No agents were created!\n';
+                }
+                
+            } catch (error) {
+                output.innerHTML += `❌ Error: ${error.message}\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        function getAgentTypeName(typeValue) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === typeValue) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+    </script>
+</body>
+</html>

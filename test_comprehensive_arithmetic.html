@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Arithmetic Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Comprehensive Arithmetic Test</h1>
+        
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="output" class="test-output"></div>
+        <div id="summary" class="summary"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType, PortType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+        
+        const testCases = [
+            { expression: '2 + 3', expected: 5 },
+            { expression: '2 + 3 * 4', expected: 14 },
+            { expression: '2 * 3 + 4', expected: 10 },
+            { expression: '10 - 3', expected: 7 },
+            { expression: '8 / 2', expected: 4 },
+            { expression: '2 + 3 + 4', expected: 9 },
+            { expression: '2 * 3 * 4', expected: 24 }
+        ];
+        
+        let results = [];
+        
+        window.runAllTests = function() {
+            const output = document.getElementById('output');
+            const summary = document.getElementById('summary');
+            output.innerHTML = 'Running comprehensive arithmetic tests...\n\n';
+            results = [];
+            
+            testCases.forEach((testCase, index) => {
+                output.innerHTML += `Test ${index + 1}: ${testCase.expression}\n`;
+                
+                try {
+                    const result = testExpression(testCase.expression);
+                    const passed = result === testCase.expected;
+                    
+                    results.push({
+                        expression: testCase.expression,
+                        expected: testCase.expected,
+                        actual: result,
+                        passed: passed
+                    });
+                    
+                    output.innerHTML += `  Expected: ${testCase.expected}, Got: ${result} `;
+                    output.innerHTML += passed ? '<span class="pass">✅ PASS</span>\n' : '<span class="fail">❌ FAIL</span>\n';
+                    
+                } catch (error) {
+                    output.innerHTML += `  <span class="fail">❌ ERROR: ${error.message}</span>\n`;
+                    results.push({
+                        expression: testCase.expression,
+                        expected: testCase.expected,
+                        actual: 'ERROR',
+                        passed: false,
+                        error: error.message
+                    });
+                }
+                
+                output.innerHTML += '\n';
+            });
+            
+            // Show summary
+            const passed = results.filter(r => r.passed).length;
+            const total = results.length;
+            const percentage = ((passed / total) * 100).toFixed(1);
+            
+            summary.innerHTML = `
+                <h3>Test Summary</h3>
+                <p><strong>Total Tests:</strong> ${total}</p>
+                <p><strong>Passed:</strong> ${passed}</p>
+                <p><strong>Failed:</strong> ${total - passed}</p>
+                <p><strong>Success Rate:</strong> ${percentage}%</p>
+                ${passed === total ? '<p class="pass">🎉 All tests passed!</p>' : '<p class="fail">⚠️ Some tests failed.</p>'}
+            `;
+        };
+        
+        function testExpression(expression) {
+            // Parse the expression
+            const tokens = tokenizeZapp(expression);
+            const parser = new NetParser();
+            const net = parser.parse(tokens);
+            
+            // Reduce to normal form
+            const result = net.reduceToNormalForm(20);
+            
+            // Get the computed result
+            if (net.agents.size === 1) {
+                const finalAgent = Array.from(net.agents.values())[0];
+                if (finalAgent.type === AgentType.NUM) {
+                    return finalAgent.data;
+                }
+            }
+            
+            // If there are multiple NUM agents, check if they represent a complex result
+            const numAgents = Array.from(net.agents.values()).filter(agent => agent.type === AgentType.NUM);
+            if (numAgents.length === 1) {
+                return numAgents[0].data;
+            }
+            
+            throw new Error(`Could not determine result. Final net has ${net.agents.size} agents.`);
+        }
+        
+        function getAgentTypeName(typeValue) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === typeValue) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+    </script>
+</body>
+</html>

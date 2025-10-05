@@ -45,7 +45,6 @@ class Port {
     // Create new connection
     this.connectedTo = otherPort;
     otherPort.connectedTo = this;
-    
   }
 
   disconnect() {
@@ -259,10 +258,14 @@ class InteractionNet {
     
     const rules = {
       [`${AgentType.LAM},${AgentType.APP}`]: this.reduceLambdaApp,
+      [`${AgentType.APP},${AgentType.LAM}`]: this.reduceLambdaApp,
       [`${AgentType.DUP},${AgentType.CON}`]: this.reduceDupCon,
+      [`${AgentType.CON},${AgentType.DUP}`]: this.reduceDupCon,
       [`${AgentType.OP2},${AgentType.NUM}`]: this.reduceOp2Num,
+      [`${AgentType.NUM},${AgentType.OP2}`]: this.reduceOp2Num,
       [`${AgentType.OP2},${AgentType.OP2}`]: this.reduceOp2Op2,
       [`${AgentType.SUP},${AgentType.ANY}`]: this.reduceSup,
+      [`${AgentType.ANY},${AgentType.SUP}`]: this.reduceSup,
     };
 
     return rules[`${t1},${t2}`] || null;
@@ -270,17 +273,28 @@ class InteractionNet {
 
   // Beta reduction: (λx.M) N → M[x := N]
   reduceLambdaApp(lambdaAgent, appAgent) {
-    // Create new agent for the function body
-    const bodyAgent = this.createAgent(AgentType.CON, 0, lambdaAgent.data);
-    
-    // Connect the argument to all free variables in the body
-    // This is simplified - real implementation would need variable tracking
+    // Get the argument from the APP agent
     const argPort = appAgent.auxiliaryPorts[0];
     if (argPort && argPort.isConnected()) {
       const argAgent = argPort.getConnectedAgent();
+      
       if (argAgent) {
-        // Connect argument to body (simplified)
-        this.connectPorts(bodyAgent.principalPort, argPort.connectedTo);
+        // Find all CON agents that represent the lambda parameter
+        const paramName = lambdaAgent.data;
+        const agents = Array.from(this.agents.values());
+        
+        for (const agent of agents) {
+          if (agent.type === AgentType.CON && agent.data === paramName) {
+            // Replace the parameter reference with the argument
+            // Connect whatever was connected to the parameter to the argument
+            if (agent.principalPort.isConnected()) {
+              const connectedPort = agent.principalPort.connectedTo;
+              connectedPort.connect(argAgent.principalPort);
+            }
+            // Remove the parameter CON agent
+            this.removeAgent(agent.id);
+          }
+        }
       }
     }
 
@@ -327,9 +341,9 @@ class InteractionNet {
 
     // Connect any remaining connections from the OP2's principal port
     if (op2Agent.principalPort.isConnected()) {
-      const connectedAgent = op2Agent.principalPort.getConnectedAgent();
-      if (connectedAgent) {
-        resultAgent.principalPort.connect(op2Agent.principalPort.connectedTo);
+      const connectedPort = op2Agent.principalPort.connectedTo;
+      if (connectedPort) {
+        resultAgent.principalPort.connect(connectedPort);
       }
     }
 

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Lambda Expressions</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Lambda Expressions</h1>
+        
+        <div class="test-section">
+            <h2>Test (λx.λy.x + y) 2 3</h2>
+            <button onclick="testLambdaExpression()">Run Test</button>
+            <div id="output" class="test-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Simple Lambda</h2>
+            <button onclick="testSimpleLambda()">Run Test</button>
+            <div id="simple-output" class="test-output"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType, PortType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+        
+        window.testLambdaExpression = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Testing lambda expression: (λx.λy.x + y) 2 3\n\n';
+            
+            try {
+                // Tokenize
+                const sourceCode = '(λx.λy.x + y) 2 3';
+                output.innerHTML += `📝 Source: ${sourceCode}\n`;
+                
+                const tokens = tokenizeZapp(sourceCode);
+                output.innerHTML += `✓ Generated ${tokens.length} tokens:\n`;
+                tokens.forEach((token, i) => {
+                    output.innerHTML += `  ${i}: type="${token.type}", value="${token.value}"\n`;
+                });
+                output.innerHTML += '\n';
+                
+                // Parse
+                output.innerHTML += '🕸️ Parsing...\n';
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                output.innerHTML += `✓ Created net with ${net.agents.size} agents\n\n`;
+                
+                // Show agents
+                output.innerHTML += '📋 Agents created:\n';
+                for (const agent of net.agents.values()) {
+                    const typeName = getAgentTypeName(agent.type);
+                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
+                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
+                    
+                    // Show connections
+                    agent.getAllPorts().forEach(port => {
+                        if (port.isConnected()) {
+                            const connectedAgent = port.getConnectedAgent();
+                            const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
+                            output.innerHTML += `    ${portType} → Agent ${connectedAgent.id}\n`;
+                        }
+                    });
+                }
+                
+                output.innerHTML += '\n';
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                output.innerHTML += `🔍 Found ${activePairs.length} active pairs\n`;
+                
+                if (activePairs.length > 0) {
+                    output.innerHTML += '\nActive pairs:\n';
+                    activePairs.forEach((pair, i) => {
+                        if (pair.type === 'arithmetic') {
+                            const type1 = getAgentTypeName(pair.agent1.type);
+                            const type2 = getAgentTypeName(pair.agent2.type);
+                            const type3 = getAgentTypeName(pair.agent3.type);
+                            output.innerHTML += `  ${i + 1}. ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair.agent3.data}) [ARITHMETIC]\n`;
+                        } else {
+                            const type1 = getAgentTypeName(pair.agent1.type);
+                            const type2 = getAgentTypeName(pair.agent2.type);
+                            output.innerHTML += `  ${i + 1}. ${type1} ↔ ${type2} [PRINCIPAL]\n`;
+                        }
+                    });
+                }
+                
+                // Test reduction
+                output.innerHTML += '\n⚡ Testing reduction...\n';
+                const result = net.reduceToNormalForm(10);
+                output.innerHTML += `✓ Reduction completed in ${result.steps} steps\n`;
+                output.innerHTML += `✓ Normal form: ${result.normalForm ? 'Yes' : 'No'}\n`;
+                output.innerHTML += `✓ Final agents: ${result.finalAgents}\n\n`;
+                
+                // Show final state
+                output.innerHTML += '📋 Final agents:\n';
+                for (const agent of net.agents.values()) {
+                    const typeName = getAgentTypeName(agent.type);
+                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
+                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
+                }
+                
+                output.innerHTML += '\n<span class="pass">✅ Lambda expression parsed successfully without stack overflow!</span>\n';
+                
+            } catch (error) {
+                output.innerHTML += `❌ Error: ${error.message}\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        window.testSimpleLambda = function() {
+            const output = document.getElementById('simple-output');
+            output.innerHTML = 'Testing simple lambda: λx.x\n\n';
+            
+            try {
+                // Tokenize
+                const sourceCode = 'λx.x';
+                output.innerHTML += `📝 Source: ${sourceCode}\n`;
+                
+                const tokens = tokenizeZapp(sourceCode);
+                output.innerHTML += `✓ Generated ${tokens.length} tokens:\n`;
+                tokens.forEach((token, i) => {
+                    output.innerHTML += `  ${i}: type="${token.type}", value="${token.value}"\n`;
+                });
+                output.innerHTML += '\n';
+                
+                // Parse
+                output.innerHTML += '🕸️ Parsing...\n';
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                output.innerHTML += `✓ Created net with ${net.agents.size} agents\n\n`;
+                
+                output.innerHTML += '<span class="pass">✅ Simple lambda parsed successfully!</span>\n';
+                
+            } catch (error) {
+                output.innerHTML += `❌ Error: ${error.message}\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        function getAgentTypeName(typeValue) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === typeValue) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+    </script>
+</body>
+</html>

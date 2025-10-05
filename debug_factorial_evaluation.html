@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Factorial Evaluation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Factorial Evaluation</h1>
+        
+        <button onclick="debugFactorialEvaluation()">Debug Factorial Evaluation</button>
+        <div id="output" class="test-output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType, PortType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+        
+        window.debugFactorialEvaluation = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Debugging factorial evaluation...\n\n';
+            
+            try {
+                // Parse factorial function
+                const sourceCode = `def factorial n = 
+  if n == 0 
+  then 1 
+  else n * factorial (n - 1)
+  
+factorial 5`;
+                
+                output.innerHTML += `📝 Source:\n${sourceCode}\n\n`;
+                
+                const tokens = tokenizeZapp(sourceCode);
+                output.innerHTML += `✓ Generated ${tokens.length} tokens\n\n`;
+                
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                output.innerHTML += `✓ Created net with ${net.agents.size} agents\n\n`;
+                
+                // Show initial net structure
+                output.innerHTML += '📋 Initial agents:\n';
+                for (const agent of net.agents.values()) {
+                    const typeName = getAgentTypeName(agent.type);
+                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
+                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
+                    
+                    // Show connections
+                    agent.getAllPorts().forEach(port => {
+                        if (port.isConnected()) {
+                            const connectedAgent = port.getConnectedAgent();
+                            const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
+                            output.innerHTML += `    ${portType} → Agent ${connectedAgent.id}\n`;
+                        }
+                    });
+                }
+                
+                output.innerHTML += '\n';
+                
+                // Find active pairs before reduction
+                const initialActivePairs = net.findActivePairs();
+                output.innerHTML += `🔍 Initial active pairs: ${initialActivePairs.length}\n`;
+                if (initialActivePairs.length > 0) {
+                    initialActivePairs.forEach((pair, i) => {
+                        if (pair.type === 'arithmetic') {
+                            const type1 = getAgentTypeName(pair.agent1.type);
+                            const type2 = getAgentTypeName(pair.agent2.type);
+                            const type3 = getAgentTypeName(pair.agent3.type);
+                            output.innerHTML += `  ${i + 1}. ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair.agent3.data}) [ARITHMETIC]\n`;
+                        } else {
+                            const type1 = getAgentTypeName(pair.agent1.type);
+                            const type2 = getAgentTypeName(pair.agent2.type);
+                            output.innerHTML += `  ${i + 1}. ${type1} ↔ ${type2} [PRINCIPAL]\n`;
+                        }
+                    });
+                }
+                
+                output.innerHTML += '\n⚡ Starting reduction...\n';
+                
+                // Perform reduction step by step
+                let step = 0;
+                let hasMoreReductions = true;
+                
+                while (hasMoreReductions && step < 10) {
+                    step++;
+                    output.innerHTML += `\n--- Step ${step} ---\n`;
+                    
+                    const beforeCount = net.agents.size;
+                    const activePairs = net.findActivePairs();
+                    
+                    output.innerHTML += `Active pairs: ${activePairs.length}\n`;
+                    
+                    if (activePairs.length === 0) {
+                        hasMoreReductions = false;
+                        output.innerHTML += 'No more active pairs found\n';
+                        break;
+                    }
+                    
+                    // Show what will be reduced
+                    activePairs.forEach((pair, i) => {
+                        if (pair.type === 'arithmetic') {
+                            const type1 = getAgentTypeName(pair.agent1.type);
+                            const type2 = getAgentTypeName(pair.agent2.type);
+                            const type3 = getAgentTypeName(pair.agent3.type);
+                            output.innerHTML += `  Reducing: ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair3.data})\n`;
+                        }
+                    });
+                    
+                    // Perform one reduction step
+                    hasMoreReductions = net.reduceStep();
+                    
+                    const afterCount = net.agents.size;
+                    output.innerHTML += `Agents: ${beforeCount} → ${afterCount}\n`;
+                }
+                
+                output.innerHTML += `\n🎯 Final result after ${step} steps:\n`;
+                
+                // Show final net structure
+                output.innerHTML += '📋 Final agents:\n';
+                for (const agent of net.agents.values()) {
+                    const typeName = getAgentTypeName(agent.type);
+                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
+                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
+                }
+                
+                // Try to determine the result
+                const numAgents = Array.from(net.agents.values()).filter(agent => agent.type === AgentType.NUM);
+                if (numAgents.length === 1) {
+                    output.innerHTML += `\n🎯 Computed Result: ${numAgents[0].data}\n`;
+                } else if (numAgents.length > 1) {
+                    output.innerHTML += `\n⚠️ Multiple NUM agents found: ${numAgents.map(a => a.data).join(', ')}\n`;
+                } else {
+                    output.innerHTML += `\n❌ No NUM agents found in final net\n`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `❌ Error: ${error.message}\n`;
+                output.innerHTML += error.stack;
+            }
+        };
+        
+        function getAgentTypeName(typeValue) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === typeValue) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+    </script>
+</body>
+</html>
