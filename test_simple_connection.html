@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple Connection</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Simple Connection</h1>
+        <p>Testing basic connection between agents.</p>
+        
+        <button onclick="testConnection()">Test Connection</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType } from './src/core/interaction_net.js';
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function testConnection() {
+            clearOutput();
+            log('Testing basic connection between agents');
+            
+            try {
+                const net = new InteractionNet();
+                
+                // Create two agents
+                const agent1 = net.createAgent(AgentType.LAM, 1, 'x');
+                const agent2 = net.createAgent(AgentType.APP, 1);
+                
+                log(`Created agent1: ${agent1.id} (LAM)`);
+                log(`Created agent2: ${agent2.id} (APP)`);
+                
+                // Check initial state
+                log(`\nBefore connection:`);
+                log(`  agent1 principal connected: ${agent1.principalPort.isConnected()}`);
+                log(`  agent2 principal connected: ${agent2.principalPort.isConnected()}`);
+                
+                // Connect them
+                log(`\nConnecting agent1.principalPort to agent2.principalPort`);
+                net.connectPorts(agent1.principalPort, agent2.principalPort);
+                
+                // Check after connection
+                log(`\nAfter connection:`);
+                log(`  agent1 principal connected: ${agent1.principalPort.isConnected()}`);
+                log(`  agent2 principal connected: ${agent2.principalPort.isConnected()}`);
+                
+                if (agent1.principalPort.isConnected()) {
+                    const connected = agent1.principalPort.getConnectedAgent();
+                    log(`  agent1 connected to: ${connected.id}`);
+                }
+                
+                if (agent2.principalPort.isConnected()) {
+                    const connected = agent2.principalPort.getConnectedAgent();
+                    log(`  agent2 connected to: ${connected.id}`);
+                }
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                log(`\nActive pairs found: ${activePairs.length}`);
+                activePairs.forEach((pair, i) => {
+                    log(`  Pair ${i}: ${pair.type}`);
+                    if (pair.agent1 && pair.agent2) {
+                        log(`    Agent1: ${pair.agent1.id}`);
+                        log(`    Agent2: ${pair.agent2.id}`);
+                    }
+                });
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        // Make functions available globally
+        window.testConnection = testConnection;
+        window.clearOutput = clearOutput;
+        
+        // Run test automatically when page loads
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 500);
+        });
+    </script>
+</body>
+</html>

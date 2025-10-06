@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Currying Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .agent-info {
+            background-color: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Currying Test</h1>
+        <p>Testing the currying mechanism for nested lambda applications.</p>
+        
+        <button onclick="testSimpleCurry()">Test Simple Currying</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function printNetState(net, step) {
+            log(`<div class="step">Step ${step}: Net state`);
+            log(`  Agents: ${net.agents.size}`);
+            log(`  Reduction steps: ${net.reductionSteps}`);
+            
+            const agents = Array.from(net.agents.values());
+            for (const agent of agents) {
+                let typeName = 'UNKNOWN';
+                for (const [key, value] of Object.entries(AgentType)) {
+                    if (typeof value === 'number' && value === agent.type) {
+                        typeName = key;
+                        break;
+                    }
+                }
+                
+                log(`  <div class="agent-info">Agent ${agent.id}: ${typeName} (arity: ${agent.arity}, data: ${agent.data})</div>`);
+                
+                // Print connections
+                agent.getAllPorts().forEach((port, index) => {
+                    if (port.isConnected()) {
+                        const connectedAgent = port.getConnectedAgent();
+                        log(`    Port ${index} -> Agent ${connectedAgent.id}`);
+                    }
+                });
+            }
+            log(`</div>`);
+        }
+
+        function testSimpleCurry() {
+            clearOutput();
+            log('Testing: (λx.λy.x + y) 2 3');
+            
+            try {
+                // Test with just the first argument
+                log('\n=== Testing with first argument only ===');
+                const tokens1 = tokenizeZapp('(λx.λy.x + y) 3');
+                log('Tokens:');
+                tokens1.forEach((token, i) => {
+                    log(`  ${i}: ${token.type} = "${token.value}"`);
+                });
+                
+                const parser1 = new NetParser();
+                const net1 = parser1.parse(tokens1);
+                
+                printNetState(net1, 'After parsing (λx.λy.x + y) 3');
+                
+                // Find active pairs
+                const activePairs1 = net1.findActivePairs();
+                log(`Active pairs found: ${activePairs1.length}`);
+                
+                // Test with both arguments
+                log('\n=== Testing with both arguments ===');
+                const tokens2 = tokenizeZapp('(λx.λy.x + y) 2 3');
+                log('Tokens:');
+                tokens2.forEach((token, i) => {
+                    log(`  ${i}: ${token.type} = "${token.value}"`);
+                });
+                
+                const parser2 = new NetParser();
+                const net2 = parser2.parse(tokens2);
+                
+                printNetState(net2, 'After parsing (λx.λy.x + y) 2 3');
+                
+                // Find active pairs
+                const activePairs2 = net2.findActivePairs();
+                log(`Active pairs found: ${activePairs2.length}`);
+                activePairs2.forEach((pair, i) => {
+                    log(`  Pair ${i}: ${pair.type}`);
+                    if (pair.agent1 && pair.agent2) {
+                        log(`    Agent1: ${pair.agent1.id}, Agent2: ${pair.agent2.id}`);
+                    }
+                });
+                
+                // Perform reduction
+                log('\n=== Performing reduction ===');
+                const result = net2.reduceToNormalForm(1000);
+                log(`Reduction result: ${JSON.stringify(result, null, 2)}`);
+                printNetState(net2, 'Final');
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        // Make functions available globally
+        window.testSimpleCurry = testSimpleCurry;
+        window.clearOutput = clearOutput;
+        
+        // Run test automatically when page loads
+        window.addEventListener('load', () => {
+            setTimeout(testSimpleCurry, 500);
+        });
+    </script>
+</body>
+</html>

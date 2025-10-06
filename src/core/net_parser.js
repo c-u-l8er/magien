@@ -5,6 +5,15 @@
 
 import { InteractionNet, Agent, AgentType } from './interaction_net.js';
 
+function getAgentTypeName(agentType) {
+  for (const [key, value] of Object.entries(AgentType)) {
+    if (typeof value === 'number' && value === agentType) {
+      return key;
+    }
+  }
+  return 'UNKNOWN';
+}
+
 class NetParser {
   constructor() {
     this.net = new InteractionNet();
@@ -20,12 +29,37 @@ class NetParser {
     // Parse tokens into net
     this.parseTokens(tokens);
 
-    // Create root agent if needed
-    if (this.net.agents.size > 0) {
+    // Create root agent if needed (but not for lambda applications)
+    if (this.net.agents.size > 0 && !this.hasLambdaApplication(tokens)) {
       this.createRootAgent();
     }
 
     return this.net;
+  }
+  
+  hasLambdaApplication(tokens) {
+    // Check if the tokens contain a lambda application
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].type === '(' && i + 1 < tokens.length && tokens[i + 1].type === 'LAMBDA') {
+        // Check if there are arguments after the closing parenthesis
+        let depth = 1;
+        let j = i + 2;
+        while (j < tokens.length && depth > 0) {
+          if (tokens[j].type === '(') {
+            depth++;
+          } else if (tokens[j].type === ')') {
+            depth--;
+          }
+          j++;
+        }
+        
+        // If there are tokens after the closing parenthesis, it's a lambda application
+        if (j < tokens.length) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   parseTokens(tokens) {
@@ -140,6 +174,10 @@ class NetParser {
   }
   
   parseExpressionWithPrecedence(tokens, startIndex) {
+    console.log(`=== parseExpressionWithPrecedence ===`);
+    console.log(`Tokens:`, tokens.map(t => `${t.type}:${t.value}`).join(', '));
+    console.log(`Start index: ${startIndex}`);
+    
     // Check if this is a lambda expression - if so, handle it separately
     if (startIndex < tokens.length && tokens[startIndex].type === 'LAMBDA') {
       return this.parseLambda(tokens, startIndex);
@@ -155,25 +193,31 @@ class NetParser {
     // Parse first operand
     const firstOperandEnd = this.findOperandEnd(tokens, i);
     const firstOperandTokens = tokens.slice(i, firstOperandEnd);
+    console.log(`First operand tokens:`, firstOperandTokens.map(t => `${t.type}:${t.value}`).join(', '));
     
     // Store the current net state to track agents created by this operand
     const beforeOperandCount = this.net.agents.size;
+    console.log(`Agent count before first operand: ${beforeOperandCount}`);
     
     // Check if this is a complex expression (like parentheses or lambda)
     if (firstOperandTokens.length === 1 &&
         (firstOperandTokens[0].type === 'INTEGER' || firstOperandTokens[0].type === 'FLOAT')) {
       // Simple literal - parse directly
+      console.log(`Parsing simple literal: ${firstOperandTokens[0].value}`);
       this.parseLiteral(firstOperandTokens, 0);
     } else if (firstOperandTokens.length > 0) {
       // Complex expression - parse but avoid infinite recursion
+      console.log(`Parsing complex expression`);
       this.parseTokensSimple(firstOperandTokens);
     }
     
     const afterOperandCount = this.net.agents.size;
+    console.log(`Agent count after first operand: ${afterOperandCount}`);
     
     // Get the agents created by this operand
     const agents = Array.from(this.net.agents.values());
     const operandAgents = agents.slice(beforeOperandCount);
+    console.log(`First operand agents:`, operandAgents.map(a => `${a.id}:${getAgentTypeName(a.type)}`));
     operands.push(...operandAgents);
     
     i = firstOperandEnd;
@@ -181,37 +225,48 @@ class NetParser {
     // Parse remaining operators and operands
     while (i < tokens.length && this.isBinaryOperator(tokens, i)) {
       const opToken = tokens[i];
+      console.log(`Found operator: ${opToken.value}`);
       i++;
       
       // Parse next operand
       const nextOperandEnd = this.findOperandEnd(tokens, i);
       const nextOperandTokens = tokens.slice(i, nextOperandEnd);
+      console.log(`Next operand tokens:`, nextOperandTokens.map(t => `${t.type}:${t.value}`).join(', '));
       
       const beforeNextOperandCount = this.net.agents.size;
+      console.log(`Agent count before next operand: ${beforeNextOperandCount}`);
       
       // Check if this is a complex expression
       if (nextOperandTokens.length === 1 &&
           (nextOperandTokens[0].type === 'INTEGER' || nextOperandTokens[0].type === 'FLOAT')) {
         // Simple literal - parse directly
+        console.log(`Parsing simple literal: ${nextOperandTokens[0].value}`);
         this.parseLiteral(nextOperandTokens, 0);
       } else if (nextOperandTokens.length > 0) {
         // Complex expression - parse but avoid infinite recursion
+        console.log(`Parsing complex expression`);
         this.parseTokensSimple(nextOperandTokens);
       }
       
       const afterNextOperandCount = this.net.agents.size;
+      console.log(`Agent count after next operand: ${afterNextOperandCount}`);
       
       const nextAgents = Array.from(this.net.agents.values());
       const nextOperandAgents = nextAgents.slice(beforeNextOperandCount);
+      console.log(`Next operand agents:`, nextOperandAgents.map(a => `${a.id}:${getAgentTypeName(a.type)}`));
       operands.push(...nextOperandAgents);
       
       operators.push(opToken.value);
       i = nextOperandEnd;
     }
     
+    console.log(`Operators:`, operators);
+    console.log(`Total operands:`, operands.map(a => `${a.id}:${getAgentTypeName(a.type)}`));
+    
     // Now build the expression tree with precedence
     this.buildExpressionTree(operators, operands);
     
+    console.log(`=== Finished parseExpressionWithPrecedence ===`);
     return i;
   }
   
@@ -250,24 +305,39 @@ class NetParser {
   }
   
   buildExpressionTree(operators, operands) {
-    if (operators.length === 0) return;
+    console.log(`=== buildExpressionTree ===`);
+    console.log(`Operators:`, operators);
+    console.log(`Operands:`, operands.map(a => `${a.id}:${getAgentTypeName(a.type)}${a.data !== null ? '(' + a.data + ')' : ''}`));
+    
+    if (operators.length === 0) {
+      console.log('No operators to process');
+      return;
+    }
     
     // First, handle * and / (higher precedence)
     let i = 0;
     while (i < operators.length) {
       const op = operators[i];
       if (op === '*' || op === '/') {
+        console.log(`Processing high-precedence operator: ${op}`);
         // Create binary operation for this operator
         const leftAgent = operands[i];
         const rightAgent = operands[i + 1];
         
+        console.log(`Left operand: ${leftAgent.id} (${getAgentTypeName(leftAgent.type)}), Right operand: ${rightAgent.id} (${getAgentTypeName(rightAgent.type)})`);
+        
         const opAgent = this.net.createAgent(AgentType.OP2, 2, this.getOperatorCode(op));
+        console.log(`Created OP2 agent ${opAgent.id} for operator ${op}`);
+        
         this.net.connectPorts(opAgent.auxiliaryPorts[0], leftAgent.principalPort);
         this.net.connectPorts(opAgent.auxiliaryPorts[1], rightAgent.principalPort);
+        console.log(`Connected operands to OP2 agent`);
         
         // Replace the two operands with the operation result
         operands.splice(i, 2, opAgent);
         operators.splice(i, 1);
+        
+        console.log(`After processing ${op}: operands=${operands.length}, operators=${operators.length}`);
         
         // Don't increment i since we removed an operator
       } else {
@@ -279,21 +349,32 @@ class NetParser {
     i = 0;
     while (i < operators.length) {
       const op = operators[i];
+      console.log(`Processing low-precedence operator: ${op}`);
       
       // Create binary operation for this operator
       const leftAgent = operands[i];
       const rightAgent = operands[i + 1];
       
+      console.log(`Left operand: ${leftAgent.id} (${getAgentTypeName(leftAgent.type)}), Right operand: ${rightAgent.id} (${getAgentTypeName(rightAgent.type)})`);
+      
       const opAgent = this.net.createAgent(AgentType.OP2, 2, this.getOperatorCode(op));
+      console.log(`Created OP2 agent ${opAgent.id} for operator ${op}`);
+      
       this.net.connectPorts(opAgent.auxiliaryPorts[0], leftAgent.principalPort);
       this.net.connectPorts(opAgent.auxiliaryPorts[1], rightAgent.principalPort);
+      console.log(`Connected operands to OP2 agent`);
       
       // Replace the two operands with the operation result
       operands.splice(i, 2, opAgent);
       operators.splice(i, 1);
       
+      console.log(`After processing ${op}: operands=${operands.length}, operators=${operators.length}`);
+      
       // Don't increment i since we removed an operator
     }
+    
+    console.log(`=== Finished buildExpressionTree ===`);
+    console.log(`Final operands:`, operands.map(a => `${a.id}:${getAgentTypeName(a.type)}${a.data !== null ? '(' + a.data + ')' : ''}`));
   }
 
   parseLambda(tokens, startIndex) {
@@ -325,36 +406,86 @@ class NetParser {
     });
     
     // Parse body
+    const beforeBodyCount = this.net.agents.size;
     this.parseTokens(bodyTokens);
+    const newAgents = Array.from(this.net.agents.values()).slice(beforeBodyCount);
+    
+    // Find the root agent of the body (the one with no incoming connections from other body agents)
+    let bodyRoot = null;
+    for (const agent of newAgents) {
+      let hasIncoming = false;
+      for (const other of newAgents) {
+        if (other !== agent) {
+          other.getAllPorts().forEach(port => {
+            if (port.isConnected() && port.getConnectedAgent() === agent) {
+              hasIncoming = true;
+            }
+          });
+        }
+      }
+      if (!hasIncoming) {
+        bodyRoot = agent;
+        break;
+      }
+    }
+    
+    // If no root found, use the last agent
+    if (!bodyRoot && newAgents.length > 0) {
+      bodyRoot = newAgents[newAgents.length - 1];
+    }
+    
+    // Connect the body root to the lambda's auxiliary port
+    if (bodyRoot) {
+      this.net.connectPorts(lambdaAgent.auxiliaryPorts[0], bodyRoot.principalPort);
+    }
     
     // Pop from stack
     this.lambdaStack.pop();
     
     // Check if this lambda is being applied to arguments (like (λx.x) 3)
-    if (bodyEnd < tokens.length && tokens[bodyEnd].type === 'INTEGER' ||
-        (bodyEnd < tokens.length && tokens[bodyEnd].type === 'IDENTIFIER' &&
-         tokens[bodyEnd].value !== 'if' && tokens[bodyEnd].value !== 'then' && tokens[bodyEnd].value !== 'else')) {
+    if (bodyEnd < tokens.length &&
+        (tokens[bodyEnd].type === 'INTEGER' || tokens[bodyEnd].type === 'FLOAT' ||
+         (tokens[bodyEnd].type === 'IDENTIFIER' &&
+          tokens[bodyEnd].value !== 'if' && tokens[bodyEnd].value !== 'then' && tokens[bodyEnd].value !== 'else') ||
+         tokens[bodyEnd].type === '(')) {
+      
       // This is a lambda application, create APP agent
       const appAgent = this.net.createAgent(AgentType.APP, 1);
       
       // Connect LAM and APP principal ports to create active pair
       this.net.connectPorts(lambdaAgent.principalPort, appAgent.principalPort);
       
-      // Parse the argument
-      const argEnd = this.findArgumentEnd(tokens, bodyEnd);
-      const argTokens = tokens.slice(bodyEnd, argEnd);
+      // Parse all arguments
+      let argStart = bodyEnd;
+      let argCount = 0;
       
-      // Parse argument
-      this.parseTokens(argTokens);
-      
-      // Connect argument to APP's auxiliary port
-      const agents = Array.from(this.net.agents.values());
-      if (agents.length > 0) {
-        const lastAgent = agents[agents.length - 1];
-        this.net.connectPorts(appAgent.auxiliaryPorts[0], lastAgent.principalPort);
+      while (argStart < tokens.length &&
+             ![')', ';', '\n'].includes(tokens[argStart].value) &&
+             tokens[argStart].type !== 'RPAREN') {
+        
+        const argEnd = this.findArgumentEnd(tokens, argStart);
+        const argTokens = tokens.slice(argStart, argEnd);
+        
+        // Parse argument
+        this.parseTokens(argTokens);
+        
+        // Connect argument to APP's auxiliary port
+        const agents = Array.from(this.net.agents.values());
+        if (agents.length > 0 && argCount < appAgent.auxiliaryPorts.length) {
+          const lastAgent = agents[agents.length - 1];
+          this.net.connectPorts(appAgent.auxiliaryPorts[argCount], lastAgent.principalPort);
+        }
+        
+        argCount++;
+        argStart = argEnd;
+        
+        // Skip commas between arguments
+        if (argStart < tokens.length && tokens[argStart].type === 'COMMA') {
+          argStart++;
+        }
       }
       
-      return argEnd;
+      return argStart;
     }
     
     return bodyEnd;
@@ -408,6 +539,9 @@ class NetParser {
   }
 
   parseLambdaApplication(tokens, startIndex) {
+    console.log(`=== parseLambdaApplication starting at index ${startIndex} ===`);
+    console.log(`Tokens:`, tokens.slice(startIndex, Math.min(startIndex + 10, tokens.length)).map(t => `${t.type}:${t.value}`).join(', '));
+    
     let i = startIndex + 1; // Skip '('
     
     // Find matching ')'
@@ -422,43 +556,221 @@ class NetParser {
     }
     
     const parenEnd = i; // Position of the closing ')'
+    console.log(`Found closing parenthesis at index ${parenEnd}`);
     
     // Parse the lambda inside parentheses
     const insideTokens = tokens.slice(startIndex + 1, parenEnd - 1);
+    console.log(`Inside tokens:`, insideTokens.map(t => `${t.type}:${t.value}`).join(', '));
     const beforeLambdaCount = this.net.agents.size;
+    console.log(`Agent count before parsing lambda: ${beforeLambdaCount}`);
     
     // Parse lambda expression
     this.parseTokens(insideTokens);
     const afterLambdaCount = this.net.agents.size;
+    console.log(`Agent count after parsing lambda: ${afterLambdaCount}`);
     
-    // Get the lambda agent (should be the first one created)
+    // Get the lambda agent - it should be the first LAM agent created
     const agents = Array.from(this.net.agents.values());
-    const lambdaAgent = agents[beforeLambdaCount];
+    const newAgents = agents.slice(beforeLambdaCount);
+    const lambdaAgent = newAgents.find(agent => agent.type === AgentType.LAM);
+    console.log(`Lambda agent: ${lambdaAgent ? lambdaAgent.id : 'not found'} (${lambdaAgent ? getAgentTypeName(lambdaAgent.type) : 'unknown'})`);
     
     // Check if there are arguments after the parentheses
     if (parenEnd < tokens.length) {
-      // Create APP agent
-      const appAgent = this.net.createAgent(AgentType.APP, 1);
+      // Parse all arguments
+      const args = [];
+      let argStart = parenEnd;
       
-      // Connect LAM and APP principal ports to create active pair
-      lambdaAgent.principalPort.connect(appAgent.principalPort);
-      
-      // Parse arguments
-      const argStart = parenEnd;
-      const argEnd = this.findArgumentEnd(tokens, argStart);
-      const argTokens = tokens.slice(argStart, argEnd);
-      
-      this.parseTokens(argTokens);
-      
-      // Connect arguments to APP's auxiliary ports
-      const afterArgCount = this.net.agents.size;
-      
-      for (let j = 0; j < Math.min(1, afterArgCount - afterLambdaCount - 1); j++) {
-        const argAgent = Array.from(this.net.agents.values())[afterLambdaCount + 1 + j];
-        appAgent.auxiliaryPorts[j].connect(argAgent.principalPort);
+      // Keep parsing arguments until we run out or hit a delimiter
+      while (argStart < tokens.length &&
+             ![')', ';', '\n'].includes(tokens[argStart].value) &&
+             tokens[argStart].type !== 'RPAREN') {
+        
+        const argEnd = this.findArgumentEnd(tokens, argStart);
+        const argTokens = tokens.slice(argStart, argEnd);
+        
+        console.log(`Found argument: ${argTokens.map(t => t.value).join(' ')}`);
+        
+        // Store argument tokens for later parsing
+        args.push(argTokens);
+        argStart = argEnd;
+        
+        // Skip whitespace between arguments
+        while (argStart < tokens.length && /\s/.test(tokens[argStart].value)) {
+          argStart++;
+        }
+        
+        // Skip commas between arguments
+        if (argStart < tokens.length && tokens[argStart].type === 'COMMA') {
+          argStart++;
+        }
       }
       
-      return argEnd;
+      if (args.length > 0) {
+        console.log(`=== Processing ${args.length} arguments ===`);
+        console.log(`Arguments:`, args.map(arg => arg.map(t => `${t.type}:${t.value}`).join(' ')));
+        
+        // For multiple arguments, we need to create a chain of applications
+        // This implements currying: ((λx.λy.body) arg1) arg2
+        
+        // Parse all arguments first
+        const argAgents = [];
+        for (const argTokens of args) {
+          const beforeArgCount = this.net.agents.size;
+          console.log(`\n--- Parsing argument: ${argTokens.map(t => t.value).join(' ')} ---`);
+          
+          // Check if this is a parenthesized expression
+          const isParenthesized = argTokens.length > 0 && argTokens[0].type === '(';
+          
+          if (isParenthesized) {
+            // This is a parenthesized expression, we need to parse it as a unit
+            // Remove the outer parentheses for parsing
+            let newAgents;
+            const innerTokens = argTokens.slice(1, argTokens.length - 1); // Exclude closing )
+            console.log('Parsing parenthesized argument:', innerTokens.map(t => t.value).join(' '));
+            console.log('Is lambda branch?', innerTokens.length > 0 && innerTokens[0].type === 'LAMBDA');
+            
+            // Check if this is a lambda expression
+            if (innerTokens.length > 0 && innerTokens[0].type === 'LAMBDA') {
+              console.log('Entering lambda branch');
+              // Parse the lambda expression
+              this.parseTokens(innerTokens);
+              
+              // Get the lambda agent created
+              newAgents = Array.from(this.net.agents.values()).slice(beforeArgCount);
+              console.log('After parsing lambda, newAgents length:', newAgents.length);
+              console.log('New agents:', newAgents.map(a => `${a.id}:${getAgentTypeName(a.type)}${a.data ? '(' + a.data + ')' : ''}`).join(', '));
+              const lamAgent = newAgents.find(agent => agent.type === AgentType.LAM);
+              
+              if (lamAgent) {
+                console.log('Found lambda agent:', lamAgent.id);
+                argAgents.push(lamAgent);
+              } else {
+                console.log('No lambda agent found in newAgents');
+              }
+            } else {
+              console.log('Entering non-lambda branch (arithmetic expression)');
+              // This is an arithmetic expression or other complex expression
+              // Parse it with precedence
+              console.log('Before parsing arithmetic, agent count:', this.net.agents.size);
+              this.parseExpressionWithPrecedence(innerTokens, 0);
+              console.log('After parsing arithmetic, agent count:', this.net.agents.size);
+              
+              // Get all agents created by this argument
+              newAgents = Array.from(this.net.agents.values()).slice(beforeArgCount);
+              console.log('After parsing non-lambda, newAgents length:', newAgents.length);
+              console.log('newAgents details:', newAgents.map(a => `${a.id}: ${getAgentTypeName(a.type)} ${a.data ? '(' + a.data + ')' : ''}`).join(', '));
+              
+              // For arithmetic expressions, we need to find the root agent
+              // The root agent should be the one that represents the entire expression
+              let rootAgent = null;
+              
+              // First, try to find an OP2 agent (binary operation)
+              for (const agent of newAgents) {
+                if (agent.type === AgentType.OP2) {
+                  rootAgent = agent;
+                  console.log('Found OP2 root:', rootAgent.id);
+                  break;
+                }
+              }
+              
+              // If no OP2 agent found, look for a LAM agent
+              if (!rootAgent) {
+                for (const agent of newAgents) {
+                  if (agent.type === AgentType.LAM) {
+                    rootAgent = agent;
+                    console.log('Found LAM root:', rootAgent.id);
+                    break;
+                  }
+                }
+              }
+              
+              // If still no root agent found, use the last agent created
+              if (!rootAgent && newAgents.length > 0) {
+                rootAgent = newAgents[newAgents.length - 1];
+                console.log('Using last agent as root:', rootAgent.id, getAgentTypeName(rootAgent.type));
+              }
+              
+              if (rootAgent) {
+                console.log('Pushing rootAgent to argAgents:', rootAgent.id, getAgentTypeName(rootAgent.type));
+                argAgents.push(rootAgent);
+              } else {
+                console.log('No root agent found for this argument');
+              }
+            }
+            console.log('After parsing argument, new agents:', newAgents ? newAgents.map(a => `${a.id}:${a.type}`).join(', ') : 'undefined');
+          } else {
+            // Simple argument, parse normally
+            this.parseTokens(argTokens);
+            
+            // Get the argument agent created
+            const newAgents = Array.from(this.net.agents.values()).slice(beforeArgCount);
+            if (newAgents.length > 0) {
+              argAgents.push(newAgents[newAgents.length - 1]);
+            }
+          }
+        }
+        
+        console.log(`\n=== Argument parsing complete ===`);
+        console.log(`Argument agents:`, argAgents.map(a => `${a.id}(${getAgentTypeName(a.type)})`));
+        
+        if (argAgents.length === 1) {
+          // Single argument - simple case
+          console.log(`Creating single APP agent for argument ${argAgents[0].id}`);
+          const appAgent = this.net.createAgent(AgentType.APP, 1);
+          this.net.connectPorts(lambdaAgent.principalPort, appAgent.principalPort);
+          this.net.connectPorts(appAgent.auxiliaryPorts[0], argAgents[0].principalPort);
+        } else {
+          // Multiple arguments - create currying chain
+          console.log(`Creating currying chain for ${argAgents.length} arguments`);
+          // The correct structure for ((λx.λy.body) arg1) arg2 is:
+          // LAM0 - APP1 (active pair for first reduction)
+          // APP1 has arg1
+          // After reduction: new LAM (from body) - APP2 (active pair for second reduction)
+          // APP2 has arg2
+          
+          // Create all APP agents first
+          const appAgents = [];
+          for (let i = 0; i < argAgents.length; i++) {
+            const appAgent = this.net.createAgent(AgentType.APP, 1);
+            appAgents.push(appAgent);
+            console.log(`Created APP agent ${appAgent.id} for argument ${i}`);
+          }
+          
+          // Connect LAM to first APP (this creates the active pair for first reduction)
+          console.log(`Connecting lambda ${lambdaAgent.id} to first APP ${appAgents[0].id}`);
+          this.net.connectPorts(lambdaAgent.principalPort, appAgents[0].principalPort);
+          
+          // Connect arguments to their respective APP agents
+          for (let i = 0; i < argAgents.length; i++) {
+            console.log(`Connecting argument ${argAgents[i].id} to APP ${appAgents[i].id}`);
+            this.net.connectPorts(appAgents[i].auxiliaryPorts[0], argAgents[i].principalPort);
+          }
+          
+          // For currying chain, we need to set up the structure for subsequent reductions
+          // The key insight is that we DON'T connect APP agents directly
+          // Instead, we rely on the reduction process to create the proper connections
+          // After the first reduction (LAM-APP), the result will be a new LAM agent
+          // This new LAM agent should then be connected to the next APP agent
+          
+          // To achieve this, we need to modify the reduction process to handle currying
+          // For now, let's create a special marker that indicates this is a currying chain
+          if (appAgents.length > 1) {
+            // Create a chain of APP agents for currying
+            // Mark each APP agent with information about the next one
+            for (let i = 0; i < appAgents.length - 1; i++) {
+              appAgents[i].data = {
+                isCurryingChain: true,
+                nextAppId: appAgents[i + 1].id,
+                chainLength: appAgents.length - i
+              };
+              console.log(`Set currying data for APP ${appAgents[i].id}: next=${appAgents[i + 1].id}, length=${appAgents.length - i}`);
+            }
+          }
+        }
+        
+        return argStart;
+      }
     }
     
     return parenEnd;
@@ -556,10 +868,12 @@ class NetParser {
   createRootAgent() {
     const rootAgent = this.net.createAgent(AgentType.ROOT, 1);
     
-    // Connect to the last created agent
+    // Connect to the last created agent that's not the ROOT itself
     const agents = Array.from(this.net.agents.values());
-    if (agents.length > 1) {
-      const lastAgent = agents[agents.length - 1];
+    const nonRootAgents = agents.filter(agent => agent.type !== AgentType.ROOT);
+    
+    if (nonRootAgents.length > 0) {
+      const lastAgent = nonRootAgents[nonRootAgents.length - 1];
       this.net.connectPorts(rootAgent.auxiliaryPorts[0], lastAgent.principalPort);
     }
     
@@ -628,16 +942,31 @@ class NetParser {
     while (i < tokens.length) {
       const token = tokens[i];
       
-      if (token.type === 'LPAREN') {
+      if (token.type === '(' || token.type === 'LPAREN') {
         depth++;
-      } else if (token.type === 'RPAREN') {
+        i++;
+      } else if (token.type === ')' || token.type === 'RPAREN') {
         depth--;
+        i++;
         if (depth < 0) break;
+        // If we've closed all parentheses and we're back at depth 0, this argument ends here
+        if (depth === 0) break;
       } else if (depth === 0 && (token.type === 'COMMA' || token.type === 'RPAREN')) {
         break;
+      } else if (depth === 0) {
+        // At depth 0, check if this is a simple token that should be its own argument
+        if (token.type === 'INTEGER' || token.type === 'FLOAT' ||
+            (token.type === 'IDENTIFIER' && token.value !== 'if' &&
+             token.value !== 'then' && token.value !== 'else')) {
+          i++;
+          break;
+        } else {
+          i++;
+        }
+      } else {
+        // Inside parentheses, just advance
+        i++;
       }
-      
-      i++;
     }
     
     return i;

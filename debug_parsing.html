@@ -17,16 +17,21 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-        .test-output {
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
             background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
             padding: 10px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            overflow-x: auto;
         }
         button {
             background-color: #007bff;
@@ -35,138 +40,253 @@
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 16px;
             margin: 5px;
         }
         button:hover {
             background-color: #0056b3;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .agent-info {
+            background-color: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 2px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Debug Parsing</h1>
+        <p>Debugging the parsing process for nested lambda applications.</p>
         
-        <button onclick="debugParsing()">Debug 2 + 3 * 4</button>
-        <div id="output" class="test-output"></div>
+        <button onclick="debugParsing()">Debug Parsing</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
     </div>
 
     <script type="module">
-        import { InteractionNet, AgentType, PortType } from './src/core/interaction_net.js';
+        import { InteractionNet, AgentType } from './src/core/interaction_net.js';
         import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
-        
-        window.debugParsing = function() {
+
+        function log(message) {
             const output = document.getElementById('output');
-            output.innerHTML = 'Debugging parsing of: 2 + 3 * 4\n\n';
+            output.innerHTML += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function printNetState(net, step) {
+            log(`<div class="step">Step ${step}: Net state`);
+            log(`  Agents: ${net.agents.size}`);
             
-            try {
-                // Tokenize
-                const sourceCode = '2 + 3 * 4';
-                output.innerHTML += `📝 Source: ${sourceCode}\n`;
-                
-                const tokens = tokenizeZapp(sourceCode);
-                output.innerHTML += `✓ Generated ${tokens.length} tokens:\n`;
-                tokens.forEach((token, i) => {
-                    output.innerHTML += `  ${i}: type="${token.type}", value="${token.value}"\n`;
-                });
-                output.innerHTML += '\n';
-                
-                // Check arithmetic expression detection
-                const parser = new NetParser();
-                output.innerHTML += `🔍 isArithmeticExpression(0): ${parser.isArithmeticExpression(tokens, 0)}\n`;
-                output.innerHTML += `🔍 isBinaryOperator(1): ${parser.isBinaryOperator(tokens, 1)}\n`;
-                output.innerHTML += `🔍 isBinaryOperator(3): ${parser.isBinaryOperator(tokens, 3)}\n\n`;
-                
-                // Parse
-                output.innerHTML += '🕸️ Parsing...\n';
-                const net = parser.parse(tokens);
-                
-                output.innerHTML += `✓ Created net with ${net.agents.size} agents\n\n`;
-                
-                // Show agents
-                output.innerHTML += '📋 Agents created:\n';
-                for (const agent of net.agents.values()) {
-                    const typeName = getAgentTypeName(agent.type);
-                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
-                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
-                    
-                    // Show connections
-                    agent.getAllPorts().forEach(port => {
-                        if (port.isConnected()) {
-                            const connectedAgent = port.getConnectedAgent();
-                            const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
-                            output.innerHTML += `    ${portType} → Agent ${connectedAgent.id}\n`;
-                        }
-                    });
-                }
-                
-                output.innerHTML += '\n';
-                
-                // Find active pairs
-                const activePairs = net.findActivePairs();
-                output.innerHTML += `🔍 Found ${activePairs.length} active pairs\n`;
-                
-                if (activePairs.length > 0) {
-                    output.innerHTML += '\nActive pairs:\n';
-                    activePairs.forEach((pair, i) => {
-                        if (pair.type === 'arithmetic') {
-                            const type1 = getAgentTypeName(pair.agent1.type);
-                            const type2 = getAgentTypeName(pair.agent2.type);
-                            const type3 = getAgentTypeName(pair.agent3.type);
-                            output.innerHTML += `  ${i + 1}. ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair.agent3.data}) [ARITHMETIC]\n`;
-                        } else {
-                            const type1 = getAgentTypeName(pair.agent1.type);
-                            const type2 = getAgentTypeName(pair.agent2.type);
-                            output.innerHTML += `  ${i + 1}. ${type1} ↔ ${type2} [PRINCIPAL]\n`;
-                        }
-                    });
-                }
-                
-                // Test reduction
-                output.innerHTML += '\n⚡ Testing reduction...\n';
-                const result = net.reduceToNormalForm(10);
-                output.innerHTML += `✓ Reduction completed in ${result.steps} steps\n`;
-                output.innerHTML += `✓ Normal form: ${result.normalForm ? 'Yes' : 'No'}\n`;
-                output.innerHTML += `✓ Final agents: ${result.finalAgents}\n\n`;
-                
-                // Show final state
-                output.innerHTML += '📋 Final agents:\n';
-                for (const agent of net.agents.values()) {
-                    const typeName = getAgentTypeName(agent.type);
-                    const dataStr = agent.data !== null ? `(${agent.data})` : '';
-                    output.innerHTML += `  Agent ${agent.id}: ${typeName}${dataStr}\n`;
-                    
-                    // Show connections
-                    agent.getAllPorts().forEach(port => {
-                        if (port.isConnected()) {
-                            const connectedAgent = port.getConnectedAgent();
-                            const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
-                            output.innerHTML += `    ${portType} → Agent ${connectedAgent.id}\n`;
-                        }
-                    });
-                }
-                
-                // Show computed result
-                if (net.agents.size === 1) {
-                    const finalAgent = Array.from(net.agents.values())[0];
-                    if (finalAgent.type === AgentType.NUM) {
-                        output.innerHTML += `\n🎯 Final result: ${finalAgent.data}\n`;
+            const agents = Array.from(net.agents.values());
+            for (const agent of agents) {
+                let typeName = 'UNKNOWN';
+                for (const [key, value] of Object.entries(AgentType)) {
+                    if (typeof value === 'number' && value === agent.type) {
+                        typeName = key;
+                        break;
                     }
                 }
                 
-            } catch (error) {
-                output.innerHTML += `❌ Error: ${error.message}\n`;
-                output.innerHTML += error.stack;
+                log(`  <div class="agent-info">Agent ${agent.id}: ${typeName} (arity: ${agent.arity}, data: ${agent.data})</div>`);
+                
+                // Print connections
+                agent.getAllPorts().forEach((port, index) => {
+                    if (port.isConnected()) {
+                        const connectedAgent = port.getConnectedAgent();
+                        log(`    Port ${index} -> Agent ${connectedAgent.id}`);
+                    }
+                });
             }
-        };
-        
-        function getAgentTypeName(typeValue) {
+            log(`</div>`);
+        }
+
+        function debugParsing() {
+            clearOutput();
+            log('Debugging parsing of: (λx.λy.x + y) 2 3');
+            
+            try {
+                // Tokenize
+                const tokens = tokenizeZapp('(λx.λy.x + y) 2 3');
+                log('Tokens:');
+                tokens.forEach((token, i) => {
+                    log(`  ${i}: ${token.type} = "${token.value}"`);
+                });
+                
+                // Create a custom parser with debug output
+                class DebugNetParser extends NetParser {
+                    parseLambdaApplication(tokens, startIndex) {
+                        log(`\n<div class="step">parseLambdaApplication called at index ${startIndex}</div>`);
+                        
+                        let i = startIndex + 1; // Skip '('
+                        
+                        // Find matching ')'
+                        let depth = 1;
+                        while (i < tokens.length && depth > 0) {
+                            if (tokens[i].type === '(') {
+                                depth++;
+                            } else if (tokens[i].type === ')') {
+                                depth--;
+                            }
+                            i++;
+                        }
+                        
+                        const parenEnd = i; // Position of the closing ')'
+                        log(`  Parentheses end at index ${parenEnd}`);
+                        
+                        // Parse the lambda inside parentheses
+                        const insideTokens = tokens.slice(startIndex + 1, parenEnd - 1);
+                        log(`  Inside tokens: ${insideTokens.map(t => t.value).join(' ')}`);
+                        
+                        const beforeLambdaCount = this.net.agents.size;
+                        log(`  Agents before parsing lambda: ${beforeLambdaCount}`);
+                        
+                        // Parse lambda expression
+                        this.parseTokens(insideTokens);
+                        const afterLambdaCount = this.net.agents.size;
+                        log(`  Agents after parsing lambda: ${afterLambdaCount}`);
+                        
+                        // Get the lambda agent (should be the first one created)
+                        const agents = Array.from(this.net.agents.values());
+                        const lambdaAgent = agents[beforeLambdaCount];
+                        log(`  Lambda agent: ${lambdaAgent.id} (data: ${lambdaAgent.data})`);
+                        
+                        // Check if there are arguments after the parentheses
+                        if (parenEnd < tokens.length) {
+                            log(`  Arguments found after parentheses`);
+                            
+                            // Parse all arguments
+                            const args = [];
+                            let argStart = parenEnd;
+                            
+                            // Keep parsing arguments until we run out or hit a delimiter
+                            while (argStart < tokens.length &&
+                                   ![')', ';', '\n'].includes(tokens[argStart].value) &&
+                                   tokens[argStart].type !== 'RPAREN') {
+                                
+                                const argEnd = this.findArgumentEnd(tokens, argStart);
+                                const argTokens = tokens.slice(argStart, argEnd);
+                                
+                                log(`    Argument ${args.length}: ${argTokens.map(t => t.value).join(' ')}`);
+                                
+                                // Store argument tokens for later parsing
+                                args.push(argTokens);
+                                argStart = argEnd;
+                                
+                                // Skip commas between arguments
+                                if (argStart < tokens.length && tokens[argStart].type === 'COMMA') {
+                                    argStart++;
+                                }
+                            }
+                            
+                            if (args.length > 0) {
+                                log(`  Creating ${args.length} APP agents for currying`);
+                                
+                                // Parse all arguments first
+                                const argAgents = [];
+                                for (let i = 0; i < args.length; i++) {
+                                    const beforeArgCount = this.net.agents.size;
+                                    this.parseTokens(args[i]);
+                                    
+                                    // Get the argument agent created
+                                    const newAgents = Array.from(this.net.agents.values()).slice(beforeArgCount);
+                                    if (newAgents.length > 0) {
+                                        const argAgent = newAgents[newAgents.length - 1];
+                                        argAgents.push(argAgent);
+                                        log(`    Argument ${i} agent: ${argAgent.id} (data: ${argAgent.data})`);
+                                    }
+                                }
+                                
+                                // Create the application chain
+                                let currentFunction = lambdaAgent;
+                                const appAgents = [];
+                                
+                                for (let i = 0; i < argAgents.length; i++) {
+                                    const appAgent = this.net.createAgent(AgentType.APP, 1);
+                                    appAgents.push(appAgent);
+                                    
+                                    log(`    Creating APP agent ${appAgent.id} for argument ${i}`);
+                                    
+                                    // Connect function to APP (creating active pair)
+                                    log(`    Connecting ${currentFunction.id} to ${appAgent.id}`);
+                                    this.net.connectPorts(currentFunction.principalPort, appAgent.principalPort);
+                                    
+                                    // Connect argument to APP
+                                    log(`    Connecting argument ${argAgents[i].id} to ${appAgent.id}`);
+                                    this.net.connectPorts(appAgent.auxiliaryPorts[0], argAgents[i].principalPort);
+                                    
+                                    // The APP becomes the function for the next iteration
+                                    currentFunction = appAgent;
+                                }
+                                
+                                return argStart;
+                            }
+                        }
+                        
+                        return parenEnd;
+                    }
+                }
+                
+                const parser = new DebugNetParser();
+                const net = parser.parse(tokens);
+                
+                printNetState(net, 'After parsing');
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                log(`\nActive pairs found: ${activePairs.length}`);
+                activePairs.forEach((pair, i) => {
+                    log(`  Pair ${i}: ${pair.type}`);
+                    if (pair.agent1 && pair.agent2) {
+                        log(`    Agent1: ${pair.agent1.id} (${getAgentTypeName(pair.agent1.type)})`);
+                        log(`    Agent2: ${pair.agent2.id} (${getAgentTypeName(pair.agent2.type)})`);
+                    }
+                });
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                log(`Stack: ${error.stack}`);
+            }
+        }
+
+        function getAgentTypeName(type) {
             for (const [key, value] of Object.entries(AgentType)) {
-                if (typeof value === 'number' && value === typeValue) {
+                if (typeof value === 'number' && value === type) {
                     return key;
                 }
             }
             return 'UNKNOWN';
         }
+
+        // Make functions available globally
+        window.debugParsing = debugParsing;
+        window.clearOutput = clearOutput;
+        
+        // Run test automatically when page loads
+        window.addEventListener('load', () => {
+            setTimeout(debugParsing, 500);
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Connection Issue in Currying</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .agent-info {
+            background-color: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        .connection-problem {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .connection-good {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Connection Issue in Currying</h1>
+        <p>This test demonstrates the connection management issue in nested lambda applications.</p>
+        
+        <button onclick="debugConnectionIssue()">Debug Connection Issue</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            let className = '';
+            
+            if (type === 'problem') {
+                className = 'connection-problem';
+            } else if (type === 'good') {
+                className = 'connection-good';
+            }
+            
+            if (className) {
+                output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            } else {
+                output.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            }
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function getAgentTypeName(agentType) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === agentType) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+
+        function printConnections(net, step) {
+            log(`<div class="step">Step ${step}: Connection Analysis`);
+            log(`  Total agents: ${net.agents.size}`);
+            
+            const agents = Array.from(net.agents.values());
+            const lamAppConnections = [];
+            
+            for (const agent of agents) {
+                const typeName = getAgentTypeName(agent.type);
+                log(`  Agent ${agent.id}: ${typeName} (data: ${agent.data})`);
+                
+                // Check all connections
+                agent.getAllPorts().forEach((port, index) => {
+                    if (port.isConnected()) {
+                        const connectedAgent = port.getConnectedAgent();
+                        const connectedType = getAgentTypeName(connectedAgent.type);
+                        const portType = index === 0 ? 'principal' : `aux[${index-1}]`;
+                        log(`    ${portType} -> Agent ${connectedAgent.id} (${connectedType})`);
+                        
+                        // Track LAM-APP connections
+                        if (agent.type === AgentType.LAM && connectedAgent.type === AgentType.APP) {
+                            lamAppConnections.push({
+                                lam: agent.id,
+                                app: connectedAgent.id,
+                                lamPort: 'principal',
+                                appPort: portType
+                            });
+                        } else if (agent.type === AgentType.APP && connectedAgent.type === AgentType.LAM) {
+                            lamAppConnections.push({
+                                lam: connectedAgent.id,
+                                app: agent.id,
+                                lamPort: portType,
+                                appPort: 'principal'
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Report LAM-APP connections
+            if (lamAppConnections.length > 0) {
+                log(`  Found ${lamAppConnections.length} LAM-APP connections:`, 'good');
+                lamAppConnections.forEach(conn => {
+                    log(`    LAM${conn.lam}.${conn.lamPort} <-> APP${conn.app}.${conn.appPort}`, 'good');
+                });
+            } else {
+                log(`  No LAM-APP connections found!`, 'problem');
+            }
+            
+            log(`</div>`);
+            return lamAppConnections;
+        }
+
+        function debugConnectionIssue() {
+            clearOutput();
+            log('=== Debugging Connection Issue in Currying ===');
+            log('Expression: (λx.λy.x + y) 2 3');
+            log('');
+            
+            try {
+                // Parse the expression
+                const tokens = tokenizeZapp('(λx.λy.x + y) 2 3');
+                log('Tokens:');
+                tokens.forEach((token, i) => {
+                    log(`  ${i}: ${token.type} = "${token.value}"`);
+                });
+                log('');
+                
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                // Check initial connections
+                const initialConnections = printConnections(net, 'Initial');
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                log(`Active pairs found: ${activePairs.length}`);
+                activePairs.forEach((pair, i) => {
+                    log(`  Pair ${i}: ${pair.type}`);
+                    if (pair.type === 'lambda') {
+                        log(`    LAM${pair.agent1.id} <-> APP${pair.agent2.id}`);
+                    }
+                });
+                log('');
+                
+                // Check if we have the expected LAM-APP connection
+                if (initialConnections.length === 0) {
+                    log('PROBLEM: No LAM-APP connection found after parsing!', 'problem');
+                    log('This confirms the connection is being overwritten during currying setup.', 'problem');
+                } else {
+                    log('GOOD: LAM-APP connection found after parsing.', 'good');
+                }
+                log('');
+                
+                // Try to perform reduction
+                log('--- Attempting reduction ---');
+                let step = 1;
+                let hadReduction = true;
+                
+                while (hadReduction && step <= 5) {
+                    log(`\nReduction step ${step}:`);
+                    hadReduction = net.reduceStep();
+                    log(`  Reduction performed: ${hadReduction}`);
+                    
+                    const stepConnections = printConnections(net, `After step ${step}`);
+                    
+                    if (!hadReduction && step === 1) {
+                        log('PROBLEM: No reduction occurred in step 1!', 'problem');
+                        log('This suggests the LAM-APP active pair is not properly connected.', 'problem');
+                    }
+                    
+                    step++;
+                }
+                
+                // Final analysis
+                log('\n=== Final Analysis ===');
+                const finalAgents = Array.from(net.agents.values());
+                const numAgents = finalAgents.filter(a => a.type === AgentType.NUM);
+                
+                // Find the result agent (the one not connected to anything else)
+                let resultAgent = null;
+                for (const agent of numAgents) {
+                    // Check if this agent is the result (not connected to other agents)
+                    let isConnectedToOther = false;
+                    agent.getAllPorts().forEach(port => {
+                        if (port.isConnected()) {
+                            const connectedAgent = port.getConnectedAgent();
+                            if (connectedAgent && connectedAgent !== agent) {
+                                isConnectedToOther = true;
+                            }
+                        }
+                    });
+                    
+                    if (!isConnectedToOther) {
+                        resultAgent = agent;
+                        break;
+                    }
+                }
+                
+                if (resultAgent) {
+                    log(`Final result: ${resultAgent.data}`, 'good');
+                } else if (numAgents.length > 0) {
+                    // If all agents are connected, take the one with the highest ID (usually the result)
+                    const lastAgent = numAgents[numAgents.length - 1];
+                    log(`Final result: ${lastAgent.data}`, 'good');
+                } else {
+                    log('No result found - reduction failed!', 'problem');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'problem');
+                log(`Stack: ${error.stack}`, 'problem');
+            }
+        }
+
+        // Make functions available globally
+        window.debugConnectionIssue = debugConnectionIssue;
+        window.clearOutput = clearOutput;
+    </script>
+</body>
+</html>
