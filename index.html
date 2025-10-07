@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zapp Language - High Performance Interaction Nets</title>
+  <title>Zapp Language - True Interaction Net System</title>
   <style>
     * {
       margin: 0;
@@ -389,39 +389,22 @@
       min-width: 220px;
     }
 
-    .benchmark-results {
+    .graph-visualization {
       background: #0d1117;
+      border: 2px solid rgba(0, 255, 136, 0.3);
       border-radius: 10px;
       padding: 20px;
-      margin-top: 20px;
-      border: 1px solid rgba(102, 126, 234, 0.2);
+      min-height: 200px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      color: #00ff88;
     }
 
-    .benchmark-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .benchmark-item:last-child {
-      border-bottom: none;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 6px;
-      background: rgba(0, 20, 40, 0.5);
-      border-radius: 3px;
-      overflow: hidden;
+    .info-text {
+      color: #00ccff;
+      font-size: 0.9em;
       margin-top: 10px;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #00ccff, #ff00ff);
-      transition: width 0.3s ease;
-      border-radius: 3px;
     }
 
     @keyframes electronGlow {
@@ -490,14 +473,6 @@
       border-left: 3px solid #00ccff;
     }
 
-    .benchmark-results {
-      background: #0d1117;
-      border-radius: 10px;
-      padding: 20px;
-      margin-top: 20px;
-      border: 1px solid rgba(0, 255, 136, 0.2);
-    }
-
     code {
       background: rgba(0, 20, 40, 0.5);
       padding: 2px 6px;
@@ -530,891 +505,545 @@
       </div>
 
       <h1>⚡ Zapp Language</h1>
-      <p class="subtitle">Massively parallel interaction net reduction on the GPU</p>
-      <div class="gpu-badge">🚀 GPU-ACCELERATED COMPUTE</div>
+      <p class="subtitle">Graph-based parallel reduction with GPU acceleration</p>
+      <div class="gpu-badge">🚀 TRUE INTERACTION NETS</div>
     </header>
 
     <div id="status" class="status info">
       <span>🔄</span>
-      <span>Initializing WebGPU...</span>
+      <span>Initializing interaction net system...</span>
     </div>
 
     <div class="controls">
-      <button id="compileBtn" disabled>🚀 Compile & Execute on GPU</button>
-      <button id="benchmarkBtn" class="secondary" disabled>📊 Run Benchmark</button>
+      <button id="parseBtn" disabled>🔗 Parse to Net</button>
+      <button id="reduceBtn" class="secondary" disabled>⚡ Reduce Net</button>
+      <button id="gpuReduceBtn" class="secondary" disabled>🚀 GPU Reduce</button>
+      <button id="visualizeBtn" class="secondary" disabled>👁️ Visualize</button>
       <select id="exampleSelect" disabled>
         <option value="">Load Example...</option>
-        <option value="factorial">Factorial (Recursive)</option>
-        <option value="fibonacci">Fibonacci</option>
-        <option value="parallel">Parallel Reduction</option>
-        <option value="arithmetic">Arithmetic Pipeline</option>
-        <option value="heavy">Heavy Computation (1000 nodes)</option>
+        <option value="lambda_calc">Lambda Calculus (λx.x)</option>
+        <option value="arithmetic">Arithmetic (2 + 3)</option>
+        <option value="factorial">Factorial (5!)</option>
+        <option value="complex">Complex Expression</option>
+        <option value="function_composition">Function Composition</option>
+        <option value="nested_argument">Nested Argument Substitution</option>
+        <option value="higher_order">Higher-Order Function</option>
+        <option value="complex_nested">Complex Nested Arguments</option>
+        <option value="double_application">Double Function Application</option>
+        <option value="triple_nested">Triple Nested Lambda</option>
+        <option value="deep_nesting">Deep Nesting (4 levels)</option>
       </select>
     </div>
 
     <div class="workspace">
       <div class="panel">
         <h2>📝 Zapp Source Code</h2>
-        <textarea id="editor" placeholder="# Write FLUX code for GPU execution...">def factorial n = 
-  if n == 0 
-  then 1 
-  else n * factorial (n - 1);
-
-factorial 10</textarea>
+        <textarea id="editor" placeholder="# Write Zapp code for interaction net reduction...">(λx.x + 2) 3</textarea>
         <div class="gpu-info">
-          💡 <strong>GPU Optimization:</strong> The interaction net will be compiled to GPU buffers and reduced in parallel using compute shaders. Each workgroup handles independent reductions simultaneously.
+          💡 <strong>True Interaction Nets:</strong> Code is converted to graph structures with agents and ports, then reduced in parallel using graph rewriting rules.
         </div>
       </div>
 
       <div class="panel">
-        <h2>📊 Execution Output</h2>
-        <div id="output" class="output">Waiting for WebGPU initialization...</div>
+        <h2>📊 Net Analysis</h2>
+        <div id="output" class="output">Waiting for initialization...</div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>⚡ Performance Metrics</h2>
-      <div class="metrics" id="metrics">
-        <div class="metric-card">
-          <div class="metric-label">GPU Time</div>
-          <div class="metric-value">--<span class="metric-unit">ms</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Reductions/sec</div>
-          <div class="metric-value">--<span class="metric-unit">K</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Total Nodes</div>
-          <div class="metric-value">--</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Reduction Steps</div>
-          <div class="metric-value">--</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Workgroups</div>
-          <div class="metric-value">--</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Parallelism</div>
-          <div class="metric-value">--<span class="metric-unit">x</span></div>
+    <div class="workspace">
+      <div class="panel">
+        <h2>🔗 Net Statistics</h2>
+        <div class="metrics" id="metrics">
+          <div class="metric-card">
+            <div class="metric-label">Agents</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Ports</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Active Pairs</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Reductions</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Normal Form</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">GPU Ready</div>
+            <div class="metric-value">--</div>
+          </div>
+          <div class="metric-card" id="result-card">
+            <div class="metric-label">Result</div>
+            <div class="metric-value">--</div>
+          </div>
         </div>
       </div>
-      <div id="benchmarkResults" class="benchmark-results" style="display: none;">
-        <h3 style="color: #667eea; margin-bottom: 15px;">Benchmark Results</h3>
-        <div id="benchmarkContent"></div>
+
+      <div class="panel">
+        <h2>👁️ Graph Visualization</h2>
+        <div id="graphViz" class="graph-visualization">Graph visualization will appear here...</div>
       </div>
     </div>
   </div>
 
-  <script>
-    // ========================================================================
-    // WEBGPU INITIALIZATION
-    // ========================================================================
-    let device, adapter;
+  <script type="module">
+    // Import interaction net modules
+    const timestamp = Date.now();
+    
+    const modules = await Promise.all([
+      import(`./src/core/interaction_net.js?t=${timestamp}`),
+      import(`./src/core/net_parser.js?t=${timestamp}`),
+      import(`./src/core/gpu_net_reducer.js?t=${timestamp}`)
+    ]);
+    
+    const { InteractionNet, AgentType, PortType } = modules[0];
+    const { NetParser, parseZappToNet, tokenizeZapp } = modules[1];
+    const { GPUNetReducer } = modules[2];
+
+    // Global state
     let gpuReady = false;
+    let gpuReducer = null;
+    let currentNet = null;
+    let originalNet = null;
 
+    // Example programs
     const examples = {
-      factorial: `def factorial n = 
-  if n == 0 
-  then 1 
-  else n * factorial (n - 1);
-
-factorial 10`,
-      fibonacci: `def fib n =
-  if n <= 1
-  then n
-  else fib (n - 1) + fib (n - 2);
-
-fib 15`,
-      parallel: `let x = sup{100, 200} in
-let y = sup{5, 10} in
-let z = sup{2, 3} in
-x + y * z`,
-      arithmetic: `let a = 42 in
-let b = 17 in
-let c = 8 in
-(a + b) * c - (a / c)`,
-      heavy: `def sum n = if n == 0 then 0 else n + sum (n - 1);
-def prod n = if n == 0 then 1 else n * prod (n - 1);
-sum 50 + prod 5`
+      lambda_calc: `(λx.x + 2) 3`,
+      arithmetic: `2 + 3 * 4`,
+      factorial: `def factorial n =
+  if n == 0
+  then 1
+  else n * factorial (n - 1)
+  
+factorial 5`,
+      complex: `(λx.λy.x + y) 2 3`,
+      function_composition: `(λf.λx.f (f x)) (λy.y + 1) 3`,
+      nested_argument: `(λx.λy.x + y) (2 + 1) 3`,
+      higher_order: `(λf.λx.f x + 1) (λy.y * 2) 4`,
+      complex_nested: `(λx.λy.x * y) (2 + 3) (4 + 1)`,
+      double_application: `(λf.λg.λx.f (g x)) (λy.y + 1) (λz.z * 2) 5`,
+      triple_nested: `(λx.λy.λz.x + y + z) 1 2 3`,
+      deep_nesting: `(λa.λb.λc.λd.a + b + c + d) 1 2 3 4`
     };
 
-    async function initWebGPU() {
+    // Initialize the system
+    async function initialize() {
       const statusEl = document.getElementById('status');
       
-      if (!navigator.gpu) {
-        statusEl.className = 'status error';
-        statusEl.innerHTML = '<span>❌</span><span>WebGPU not supported in this browser. Try Chrome/Edge 113+ or enable chrome://flags/#enable-unsafe-webgpu</span>';
-        return false;
-      }
-
       try {
-        adapter = await navigator.gpu.requestAdapter({
-          powerPreference: 'high-performance'
-        });
-
-        if (!adapter) {
-          statusEl.className = 'status error';
-          statusEl.innerHTML = '<span>❌</span><span>Failed to get GPU adapter</span>';
-          return false;
-        }
-
-        device = await adapter.requestDevice();
+        statusEl.innerHTML = '<span>🔄</span><span>Checking WebGPU support...</span>';
         
-        // Try to get adapter info (may not be available in all browsers)
-        let gpuInfo = 'GPU';
-        try {
-          if (adapter.requestAdapterInfo) {
-            const info = await adapter.requestAdapterInfo();
-            gpuInfo = `${info.device || info.description || 'GPU'} (${info.vendor || 'Unknown vendor'})`;
-          } else if (adapter.info) {
-            // Fallback for older API
-            gpuInfo = `${adapter.info.device || adapter.info.description || 'GPU'}`;
+        if (navigator.gpu) {
+          try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              const device = await adapter.requestDevice();
+              gpuReducer = new GPUNetReducer(device);
+              await gpuReducer.initialize();
+              gpuReady = true;
+              
+              statusEl.className = 'status success';
+              statusEl.innerHTML = '<span>✅</span><span>Interaction net system ready! WebGPU supported.</span>';
+            } else {
+              statusEl.className = 'status info';
+              statusEl.innerHTML = '<span>⚠️</span><span>Interaction net system ready! WebGPU adapter not available (CPU mode).</span>';
+            }
+          } catch (error) {
+            statusEl.className = 'status info';
+            statusEl.innerHTML = '<span>⚠️</span><span>Interaction net system ready! WebGPU initialization failed (CPU mode).</span>';
           }
-        } catch (e) {
-          // Silently fail - not critical
-          gpuInfo = 'GPU (info unavailable)';
+        } else {
+          statusEl.className = 'status info';
+          statusEl.innerHTML = '<span>⚠️</span><span>Interaction net system ready! WebGPU not supported (CPU mode).</span>';
         }
         
-        statusEl.className = 'status success';
-        statusEl.innerHTML = `
-          <span>✅</span>
-          <span>WebGPU initialized! Device: ${gpuInfo}</span>
-        `;
-
-        gpuReady = true;
-        
-        document.getElementById('compileBtn').disabled = false;
-        document.getElementById('benchmarkBtn').disabled = false;
+        // Enable controls
+        document.getElementById('parseBtn').disabled = false;
+        document.getElementById('reduceBtn').disabled = false;
+        document.getElementById('visualizeBtn').disabled = false;
+        document.getElementById('gpuReduceBtn').disabled = !gpuReady;
         document.getElementById('exampleSelect').disabled = false;
-
-        return true;
+        
       } catch (error) {
         statusEl.className = 'status error';
-        statusEl.innerHTML = `<span>❌</span><span>WebGPU initialization failed: ${error.message}</span>`;
-        return false;
+        statusEl.innerHTML = `<span>❌</span><span>Initialization failed: ${error.message}</span>`;
+        console.error('Initialization error:', error);
       }
     }
 
-    // ========================================================================
-    // INTERACTION NET GPU COMPILER
-    // ========================================================================
-    const NodeType = {
-      ERA: 0, CON: 1, DUP: 2, APP: 3, LAM: 4,
-      SUP: 5, NUM: 6, OP2: 8, ROOT: 10
-    };
-
-    class WebGPUNetCompiler {
-      constructor(device) {
-        this.device = device;
-        this.maxNodes = 16384; // 16K nodes max for GPU buffers
-        this.workgroupSize = 256;
-        this.cachedPipeline = null;
-      }
-
-      async compile(sourceCode) {
-        const output = document.getElementById('output');
-        output.textContent = '⚙️ Compiling to GPU buffers...\n\n';
-
-        // Parse source code (simplified for demo)
-        const net = this.parseAndCompile(sourceCode);
-        
-        output.textContent += `✓ Generated ${net.nodeCount} interaction net nodes\n`;
-        output.textContent += `✓ Allocating GPU buffers (${(net.nodeCount * 32)} bytes)\n`;
-        
-        // Create and initialize all GPU buffers - MUST unmap all before creating bind group
-        const nodeBuffer = this.createNodeBuffer(net);
-        
-        const stateBuffer = this.createStateBuffer(net.nodeCount);
-        const stateMapping = new Int32Array(stateBuffer.getMappedRange());
-        stateMapping.fill(0);
-        stateBuffer.unmap();
-        
-        const resultBuffer = this.createResultBuffer();
-
-        output.textContent += '✓ Creating compute pipeline...\n';
-        
-        // Create or reuse compute pipeline
-        if (!this.cachedPipeline) {
-          this.cachedPipeline = await this.createComputePipeline();
-          
-          if (!this.cachedPipeline) {
-            output.textContent += '❌ Pipeline creation failed!\n';
-            throw new Error('Failed to create compute pipeline');
-          }
-        } else {
-          console.log('♻️ Reusing cached pipeline');
-        }
-
-        output.textContent += '✓ GPU compilation complete\n\n';
-
-        // Verify all buffers are unmapped
-        console.log('All buffers created and unmapped, ready for bind group');
-
-        return {
-          net,
-          nodeBuffer,
-          stateBuffer,
-          resultBuffer,
-          pipeline: this.cachedPipeline
-        };
-      }
-
-      parseAndCompile(sourceCode) {
-        // Simplified compilation - in production would use full lexer/parser
-        const nodes = [];
-        let nodeId = 0;
-
-        // Parse factorial pattern
-        if (sourceCode.includes('factorial')) {
-          const match = sourceCode.match(/factorial (\d+)/);
-          const n = match ? parseInt(match[1]) : 5;
-          
-          // Generate factorial as a chain: 1 * 2 * 3 * ... * n
-          let resultId = nodeId++;
-          nodes.push({
-            id: resultId,
-            type: NodeType.NUM,
-            metadata: 1, // Start with 1
-            port0: -1,
-            port1: -1,
-            port2: -1
-          });
-
-          for (let i = 2; i <= n; i++) {
-            const numId = nodeId++;
-            nodes.push({
-              id: numId,
-              type: NodeType.NUM,
-              metadata: i,
-              port0: -1,
-              port1: -1,
-              port2: -1
-            });
-
-            const opId = nodeId++;
-            nodes.push({
-              id: opId,
-              type: NodeType.OP2,
-              metadata: 3, // multiply
-              port0: -1,
-              port1: resultId,
-              port2: numId
-            });
-
-            resultId = opId;
-          }
-        } else if (sourceCode.includes('fib')) {
-          const match = sourceCode.match(/fib (\d+)/);
-          const n = match ? parseInt(match[1]) : 10;
-          
-          // Generate fibonacci iteratively: F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2)
-          if (n === 0) {
-            nodes.push({
-              id: nodeId++,
-              type: NodeType.NUM,
-              metadata: 0,
-              port0: -1, port1: -1, port2: -1
-            });
-          } else if (n === 1) {
-            nodes.push({
-              id: nodeId++,
-              type: NodeType.NUM,
-              metadata: 1,
-              port0: -1, port1: -1, port2: -1
-            });
-          } else {
-            // Create fib(0) = 0
-            nodes.push({
-              id: nodeId++,
-              type: NodeType.NUM,
-              metadata: 0,
-              port0: -1, port1: -1, port2: -1
-            });
-            
-            // Create fib(1) = 1
-            nodes.push({
-              id: nodeId++,
-              type: NodeType.NUM,
-              metadata: 1,
-              port0: -1, port1: -1, port2: -1
-            });
-
-            // Generate fib(2) through fib(n)
-            for (let i = 2; i <= n; i++) {
-              const opId = nodeId++;
-              nodes.push({
-                id: opId,
-                type: NodeType.OP2,
-                metadata: 1, // add
-                port0: -1,
-                port1: nodeId - 3, // F(i-2)
-                port2: nodeId - 2  // F(i-1)
-              });
-            }
-          }
-        } else if (sourceCode.includes('sup')) {
-          // Parallel reduction example
-          // sup{100, 200} + sup{5, 10} * sup{2, 3}
-          // We'll compute one branch: 100 + 5 * 2 = 110
-          const num1 = nodeId++;
-          nodes.push({ id: num1, type: NodeType.NUM, metadata: 100, port0: -1, port1: -1, port2: -1 });
-          
-          const num2 = nodeId++;
-          nodes.push({ id: num2, type: NodeType.NUM, metadata: 5, port0: -1, port1: -1, port2: -1 });
-          
-          const num3 = nodeId++;
-          nodes.push({ id: num3, type: NodeType.NUM, metadata: 2, port0: -1, port1: -1, port2: -1 });
-          
-          const mul = nodeId++;
-          nodes.push({ id: mul, type: NodeType.OP2, metadata: 3, port0: -1, port1: num2, port2: num3 });
-          
-          const add = nodeId++;
-          nodes.push({ id: add, type: NodeType.OP2, metadata: 1, port0: -1, port1: num1, port2: mul });
-        } else {
-          // Default: simple arithmetic (42 + 17 = 59)
-          nodes.push(
-            { id: 0, type: NodeType.NUM, metadata: 42, port0: -1, port1: -1, port2: -1 },
-            { id: 1, type: NodeType.NUM, metadata: 17, port0: -1, port1: -1, port2: -1 },
-            { id: 2, type: NodeType.OP2, metadata: 1, port0: -1, port1: 0, port2: 1 }
-          );
-          nodeId = 3;
-        }
-
-        return {
-          nodes,
-          nodeCount: nodes.length,
-          root: nodes.length - 1
-        };
-      }
-
-      createNodeBuffer(net) {
-        const bufferSize = this.maxNodes * 32; // 32 bytes per node
-        const buffer = this.device.createBuffer({
-          size: bufferSize,
-          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-          mappedAtCreation: true,
-          label: 'Node Buffer'
-        });
-
-        const mapping = new Int32Array(buffer.getMappedRange());
-        
-        for (let i = 0; i < net.nodes.length; i++) {
-          const node = net.nodes[i];
-          const offset = i * 8; // 8 int32s per node
-          
-          mapping[offset + 0] = node.type;
-          mapping[offset + 1] = node.metadata || 0;
-          mapping[offset + 2] = node.port0;
-          mapping[offset + 3] = node.port1;
-          mapping[offset + 4] = node.port2;
-          mapping[offset + 5] = 0; // padding
-          mapping[offset + 6] = 0; // padding
-          mapping[offset + 7] = 0; // padding
-        }
-
-        buffer.unmap();
-        console.log('Node buffer created:', buffer.label, 'size:', bufferSize);
-        return buffer;
-      }
-
-      createStateBuffer(nodeCount) {
-        // State buffer must be at least 16 bytes and support atomics
-        const size = Math.max(16, nodeCount * 4);
-        const buffer = this.device.createBuffer({
-          size,
-          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-          mappedAtCreation: true,
-          label: 'State Buffer'
-        });
-        console.log('State buffer created:', buffer.label, 'size:', size);
-        return buffer;
-      }
-
-      createResultBuffer() {
-        const buffer = this.device.createBuffer({
-          size: 64,
-          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-          label: 'Result Buffer'
-        });
-
-        console.log('Result buffer created:', buffer.label);
-        return buffer;
-      }
-
-      async createComputePipeline() {
-        const shaderCode = this.getComputeShader();
-        
-        console.log('Creating shader module...');
-        console.log('Shader code length:', shaderCode.length);
-        
-        // Add error handling for shader compilation
-        let shaderModule;
-        try {
-          shaderModule = this.device.createShaderModule({
-            code: shaderCode,
-            label: 'Interaction Net Reducer'
-          });
-          
-          console.log('Shader module created, checking compilation...');
-          
-          // Check for compilation errors
-          const compilationInfo = await shaderModule.getCompilationInfo();
-          console.log('Compilation messages:', compilationInfo.messages.length);
-          
-          if (compilationInfo.messages.length > 0) {
-            for (const msg of compilationInfo.messages) {
-              console.log(`[${msg.type}] Line ${msg.lineNum}: ${msg.message}`);
-              if (msg.type === 'error') {
-                throw new Error(`Shader compilation error at line ${msg.lineNum}: ${msg.message}`);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Shader module creation failed:', error);
-          throw error;
-        }
-
-        console.log('Creating bind group layout...');
-        const bindGroupLayout = this.device.createBindGroupLayout({
-          entries: [
-            { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-            { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-            { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
-          ],
-          label: 'Net Bind Group Layout'
-        });
-
-        console.log('Creating pipeline layout...');
-        const pipelineLayout = this.device.createPipelineLayout({
-          bindGroupLayouts: [bindGroupLayout],
-          label: 'Net Pipeline Layout'
-        });
-
-        console.log('Creating compute pipeline...');
-        try {
-          const pipeline = await this.device.createComputePipelineAsync({
-            layout: pipelineLayout,
-            compute: {
-              module: shaderModule,
-              entryPoint: 'main'
-            },
-            label: 'Net Compute Pipeline'
-          });
-          
-          console.log('✅ Pipeline created successfully!');
-          return pipeline;
-        } catch (error) {
-          console.error('❌ Pipeline creation failed:', error);
-          throw error;
-        }
-      }
-
-      getComputeShader() {
-        return `
-struct Node {
-  node_type: i32,
-  metadata: i32,
-  port0: i32,
-  port1: i32,
-  port2: i32,
-  padding0: i32,
-  padding1: i32,
-  padding2: i32
-}
-
-@group(0) @binding(0) var<storage, read_write> nodes: array<Node>;
-@group(0) @binding(1) var<storage, read_write> state: array<atomic<i32>>;
-@group(0) @binding(2) var<storage, read_write> results: array<i32>;
-
-const NODE_NUM: i32 = 6;
-const NODE_OP2: i32 = 8;
-
-const OP_ADD: i32 = 1;
-const OP_SUB: i32 = 2;
-const OP_MUL: i32 = 3;
-const OP_DIV: i32 = 4;
-
-@compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  let idx = i32(global_id.x);
-  let node_count = i32(arrayLength(&nodes));
-  
-  if (idx >= node_count) {
-    return;
-  }
-
-  // Check if this is an OP2 node
-  if (nodes[idx].node_type == NODE_OP2) {
-    let left_idx = nodes[idx].port1;
-    let right_idx = nodes[idx].port2;
-    let op = nodes[idx].metadata;
-    
-    // Validate indices
-    if (left_idx >= 0 && left_idx < node_count && 
-        right_idx >= 0 && right_idx < node_count) {
+    // Parse Zapp code to interaction net
+    async function parseToNet() {
+      const sourceCode = document.getElementById('editor').value;
+      const outputEl = document.getElementById('output');
       
-      // Check if both operands are NUM nodes
-      if (nodes[left_idx].node_type == NODE_NUM && 
-          nodes[right_idx].node_type == NODE_NUM) {
+      outputEl.textContent = '🔗 Parsing to interaction net...\n\n';
+      
+      try {
+        // Tokenize
+        outputEl.textContent += '📝 Tokenizing...\n';
+        const tokens = tokenizeZapp(sourceCode);
+        outputEl.textContent += `✓ Generated ${tokens.length} tokens\n\n`;
         
-        let left_val = nodes[left_idx].metadata;
-        let right_val = nodes[right_idx].metadata;
+        // Parse to net
+        outputEl.textContent += '🕸️ Building interaction net...\n';
+        const parser = new NetParser();
+        currentNet = parser.parse(tokens);
+        originalNet = currentNet;
         
-        // Compute result
-        var result: i32 = 0;
-        if (op == OP_ADD) {
-          result = left_val + right_val;
-        } else if (op == OP_SUB) {
-          result = left_val - right_val;
-        } else if (op == OP_MUL) {
-          result = left_val * right_val;
-        } else if (op == OP_DIV) {
-          if (right_val != 0) {
-            result = left_val / right_val;
-          } else {
-            result = 0;
-          }
+        const stats = currentNet.getStats();
+        outputEl.textContent += `✓ Created net with ${stats.agentCount} agents\n`;
+        outputEl.textContent += `✓ Total ports: ${stats.agentCount * 2 + stats.agentCount * 3}\n\n`;
+        
+        // Find active pairs
+        const activePairs = currentNet.findActivePairs();
+        outputEl.textContent += `🔍 Found ${activePairs.length} active pairs\n`;
+        
+        if (activePairs.length > 0) {
+          outputEl.textContent += '\nActive pairs:\n';
+          activePairs.forEach((pair, i) => {
+            if (pair.type === 'arithmetic') {
+              const type1 = getAgentTypeName(pair.agent1.type);
+              const type2 = getAgentTypeName(pair.agent2.type);
+              const type3 = getAgentTypeName(pair.agent3.type);
+              outputEl.textContent += `  ${i + 1}. ${type1}(${pair.agent1.data}) with ${type2}(${pair.agent2.data}) and ${type3}(${pair.agent3.data}) [ARITHMETIC]\n`;
+            } else {
+              const type1 = getAgentTypeName(pair.agent1.type);
+              const type2 = getAgentTypeName(pair.agent2.type);
+              outputEl.textContent += `  ${i + 1}. ${type1} ↔ ${type2} [PRINCIPAL]\n`;
+            }
+          });
         }
         
-        // Transform OP2 node into NUM node with result
-        nodes[idx].node_type = NODE_NUM;
-        nodes[idx].metadata = result;
-        nodes[idx].port0 = -1;
-        nodes[idx].port1 = -1;
-        nodes[idx].port2 = -1;
+        outputEl.textContent += '\n✅ Net parsing completed\n';
         
-        // Store in results buffer
-        results[0] = result;
-        results[1] = idx;
+        updateMetrics(currentNet);
         
-        // Increment reduction counter
-        atomicAdd(&state[0], 1);
+      } catch (error) {
+        outputEl.textContent += `❌ Error: ${error.message}\n`;
+        outputEl.textContent += error.stack;
       }
     }
-  }
-}`;
+
+    // Reduce net on CPU
+    async function reduceNet() {
+      if (!currentNet) {
+        document.getElementById('output').textContent = '❌ No net to reduce. Parse code first.\n';
+        return;
       }
+      
+      const outputEl = document.getElementById('output');
+      outputEl.textContent = '⚡ Reducing interaction net...\n\n';
+      
+      try {
+        const result = currentNet.reduceToNormalForm(100);
+        
+        outputEl.textContent += `📊 Reduction completed in ${result.steps} steps\n`;
+        outputEl.textContent += `✓ Normal form: ${result.normalForm ? 'Yes' : 'No'}\n`;
+        outputEl.textContent += `✓ Final agents: ${result.finalAgents}\n`;
+        outputEl.textContent += `✓ Total reductions: ${result.totalSteps}\n\n`;
+        
+        // Show computed result if available
+        const computedResult = getComputedResult(currentNet);
+        console.log(`DEBUG: reduceNet computedResult: ${computedResult}`);
+        if (computedResult !== null) {
+          outputEl.textContent += `🎯 Computed Result: ${computedResult}\n\n`;
+        } else {
+          outputEl.textContent += `⚠️ No clear computed result found\n\n`;
+        }
+        
+        // Show final net stats
+        const finalStats = currentNet.getStats();
+        outputEl.textContent += 'Final net statistics:\n';
+        Object.entries(finalStats.typeDistribution).forEach(([type, count]) => {
+          outputEl.textContent += `  ${type}: ${count}\n`;
+        });
+        
+        updateMetrics(currentNet);
+        
+      } catch (error) {
+        outputEl.textContent += `❌ Reduction error: ${error.message}\n`;
+      }
+    }
 
-      async execute(compiled) {
-        const output = document.getElementById('output');
-        output.textContent += '=== GPU EXECUTION ===\n';
-        output.textContent += '🚀 Dispatching compute shaders...\n';
-
+    // Reduce net on GPU
+    async function gpuReduceNet() {
+      if (!currentNet || !gpuReady) {
+        document.getElementById('output').textContent = '❌ GPU not available or no net to reduce.\n';
+        return;
+      }
+      
+      const outputEl = document.getElementById('output');
+      outputEl.textContent = '🚀 Reducing interaction net on GPU...\n\n';
+      
+      try {
+        // Convert net to GPU buffer format
+        outputEl.textContent += '📦 Converting net to GPU format...\n';
+        const netData = currentNet.toGPUBuffer();
+        outputEl.textContent += `✓ ${netData.agents.length} agents, ${netData.ports.length} ports\n\n`;
+        
+        // Reduce on GPU
+        outputEl.textContent += '⚡ Executing GPU reduction...\n';
         const startTime = performance.now();
-
-        console.log('Creating bind group...');
-        console.log('Node buffer:', compiled.nodeBuffer);
-        console.log('State buffer:', compiled.stateBuffer);
-        console.log('Result buffer:', compiled.resultBuffer);
-        console.log('Pipeline:', compiled.pipeline);
-
-        let bindGroup;
-        try {
-          console.log('🔍 Validating buffers before bind group creation...');
-          console.log('Node buffer size:', compiled.nodeBuffer.size, 'usage:', compiled.nodeBuffer.usage);
-          console.log('State buffer size:', compiled.stateBuffer.size, 'usage:', compiled.stateBuffer.usage);
-          console.log('Result buffer size:', compiled.resultBuffer.size, 'usage:', compiled.resultBuffer.usage);
-
-          bindGroup = device.createBindGroup({
-            layout: compiled.pipeline.getBindGroupLayout(0),
-            entries: [
-              { binding: 0, resource: { buffer: compiled.nodeBuffer } },
-              { binding: 1, resource: { buffer: compiled.stateBuffer } },
-              { binding: 2, resource: { buffer: compiled.resultBuffer } }
-            ],
-            label: 'Net Bind Group'
-          });
-          console.log('✅ Bind group created successfully');
-        } catch (error) {
-          console.error('❌ Bind group creation failed:', error);
-          console.error('Error details:', error);
-          output.textContent += `❌ Bind group error: ${error.message}\n`;
-          throw error;
-        }
-
-        let steps = 0;
-        const maxSteps = 50;
-
-        // Add device error scope
-        device.pushErrorScope('validation');
-        device.pushErrorScope('out-of-memory');
-
-        // Multi-pass reduction: each pass reduces one level
-        // We need to await each pass to ensure sequential reduction
-        for (let i = 0; i < maxSteps; i++) {
-          const commandEncoder = device.createCommandEncoder({
-            label: `Reduction Pass ${i}`
-          });
-          
-          const passEncoder = commandEncoder.beginComputePass({
-            label: `Compute Pass ${i}`
-          });
-          
-          passEncoder.setPipeline(compiled.pipeline);
-          passEncoder.setBindGroup(0, bindGroup);
-          
-          const workgroups = Math.ceil(compiled.net.nodeCount / this.workgroupSize);
-          passEncoder.dispatchWorkgroups(workgroups, 1, 1);
-          passEncoder.end();
-
-          const commandBuffer = commandEncoder.finish();
-          device.queue.submit([commandBuffer]);
-          
-          // Wait for this pass to complete before starting next one
-          await device.queue.onSubmittedWorkDone();
-          
-          steps++;
-        }
         
-        // Check for errors
-        const validationError = await device.popErrorScope();
-        const oomError = await device.popErrorScope();
+        const result = await gpuReducer.reduceNet(netData, 50);
         
-        if (validationError) {
-          output.textContent += `⚠️ Validation error: ${validationError.message}\n`;
-        }
-        if (oomError) {
-          output.textContent += `⚠️ Out of memory error: ${oomError.message}\n`;
-        }
-
         const endTime = performance.now();
         const gpuTime = endTime - startTime;
-
-        // Read results
-        const resultStaging = device.createBuffer({
-          size: 64,
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-        });
-
-        const copyEncoder = device.createCommandEncoder();
-        copyEncoder.copyBufferToBuffer(compiled.resultBuffer, 0, resultStaging, 0, 64);
-        device.queue.submit([copyEncoder.finish()]);
-
-        await resultStaging.mapAsync(GPUMapMode.READ);
-        const resultData = new Int32Array(resultStaging.getMappedRange());
-        const result = resultData[0];
-        const resultNodeIdx = resultData[1];
-        resultStaging.unmap();
         
-        // Also read back the final node buffer to find the result
-        const nodeStaging = device.createBuffer({
-          size: this.maxNodes * 32,
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-        });
+        outputEl.textContent += `✓ GPU reduction completed in ${result.steps} steps\n`;
+        outputEl.textContent += `✓ GPU time: ${gpuTime.toFixed(2)}ms\n`;
+        outputEl.textContent += `✓ Final agents: ${result.metadata.agentCount}\n`;
+        outputEl.textContent += `✓ Completed: ${result.completed ? 'Yes' : 'No'}\n\n`;
         
-        const nodeEncoder = device.createCommandEncoder();
-        nodeEncoder.copyBufferToBuffer(compiled.nodeBuffer, 0, nodeStaging, 0, this.maxNodes * 32);
-        device.queue.submit([nodeEncoder.finish()]);
+        // Convert back to net for visualization
+        currentNet = InteractionNet.fromGPUBuffer(result);
+        updateMetrics(currentNet);
         
-        await nodeStaging.mapAsync(GPUMapMode.READ);
-        const nodeData = new Int32Array(nodeStaging.getMappedRange());
-        
-        // Debug: print all nodes
-        output.textContent += '\n=== FINAL NODE STATE ===\n';
-        for (let i = 0; i < Math.min(compiled.net.nodeCount, 20); i++) {
-          const offset = i * 8;
-          const nodeType = nodeData[offset];
-          const metadata = nodeData[offset + 1];
-          const port0 = nodeData[offset + 2];
-          const port1 = nodeData[offset + 3];
-          const port2 = nodeData[offset + 4];
-          
-          const typeName = nodeType === 6 ? 'NUM' : (nodeType === 8 ? 'OP2' : `TYPE${nodeType}`);
-          output.textContent += `Node ${i}: ${typeName} meta=${metadata} ports=[${port0},${port1},${port2}]\n`;
+        // Show computed result if available
+        const computedResult = getComputedResult(currentNet);
+        if (computedResult !== null) {
+          outputEl.textContent += `🎯 Computed Result: ${computedResult}\n\n`;
         }
-        output.textContent += '\n';
         
-        // Check results buffer
-        output.textContent += `Results buffer: [${result}, ${resultNodeIdx}]\n`;
+        outputEl.textContent += '✅ GPU reduction completed\n';
         
-        // Find the last NUM node (should be the result)
-        let finalResult = result;
-        for (let i = compiled.net.nodeCount - 1; i >= 0; i--) {
-          const offset = i * 8;
-          const nodeType = nodeData[offset];
-          const metadata = nodeData[offset + 1];
-          
-          if (nodeType === NodeType.NUM) {
-            finalResult = metadata;
-            output.textContent += `✓ Result found in node ${i}: ${finalResult}\n`;
-            break;
-          }
-        }
-        nodeStaging.unmap();
-
-        output.textContent += `✓ Reduction completed in ${steps} GPU passes\n`;
-        output.textContent += `✓ GPU execution time: ${gpuTime.toFixed(2)}ms\n\n`;
-        output.textContent += `🎯 RESULT: ${finalResult}\n`;
-
-        return {
-          result: finalResult,
-          steps,
-          gpuTime,
-          nodeCount: compiled.net.nodeCount,
-          workgroups: Math.ceil(compiled.net.nodeCount / this.workgroupSize)
-        };
-      }
-    }
-
-    // ========================================================================
-    // UI LOGIC
-    // ========================================================================
-    const editor = document.getElementById('editor');
-    const compileBtn = document.getElementById('compileBtn');
-    const benchmarkBtn = document.getElementById('benchmarkBtn');
-    const exampleSelect = document.getElementById('exampleSelect');
-
-    async function compileAndExecute() {
-      if (!gpuReady) return;
-
-      compileBtn.disabled = true;
-      compileBtn.textContent = '⚙️ Computing on GPU...';
-      compileBtn.classList.add('computing');
-
-      try {
-        const compiler = new WebGPUNetCompiler(device);
-        const compiled = await compiler.compile(editor.value);
-        const metrics = await compiler.execute(compiled);
-
-        updateMetrics(metrics);
-        
-        // Clean up buffers after we're done
-        compiled.nodeBuffer.destroy();
-        compiled.stateBuffer.destroy();
-        compiled.resultBuffer.destroy();
-        
-        compileBtn.textContent = '🚀 Compile & Execute on GPU';
-        compileBtn.classList.remove('computing');
-        compileBtn.disabled = false;
       } catch (error) {
-        document.getElementById('output').textContent = `❌ Error: ${error.message}\n\n${error.stack}`;
-        compileBtn.textContent = '🚀 Compile & Execute on GPU';
-        compileBtn.classList.remove('computing');
-        compileBtn.disabled = false;
+        outputEl.textContent += `❌ GPU reduction error: ${error.message}\n`;
+        console.error('GPU error:', error);
       }
     }
 
-    function updateMetrics(metrics) {
-      const cards = document.querySelectorAll('.metric-card .metric-value');
+    // Visualize net as graph
+    function visualizeNet() {
+      if (!currentNet) {
+        document.getElementById('graphViz').textContent = 'No net to visualize. Parse code first.';
+        return;
+      }
       
-      const reductionsPerSec = (metrics.steps / (metrics.gpuTime / 1000)) / 1000;
-      const parallelism = metrics.workgroups * 256;
+      const graphVizEl = document.getElementById('graphViz');
       
-      cards[0].innerHTML = `${metrics.gpuTime.toFixed(2)}<span class="metric-unit">ms</span>`;
-      cards[1].innerHTML = `${reductionsPerSec.toFixed(1)}<span class="metric-unit">K</span>`;
-      cards[2].innerHTML = `${metrics.nodeCount}`;
-      cards[3].innerHTML = `${metrics.steps}`;
-      cards[4].innerHTML = `${metrics.workgroups}`;
-      cards[5].innerHTML = `${parallelism}<span class="metric-unit">x</span>`;
-    }
-
-    async function runBenchmark() {
-      if (!gpuReady) return;
-
-      benchmarkBtn.disabled = true;
-      benchmarkBtn.textContent = '⏱️ Benchmarking...';
-
-      const benchmarks = [
-        { name: 'Factorial(5)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 5' },
-        { name: 'Factorial(10)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 10' },
-        { name: 'Factorial(15)', code: 'def factorial n = if n == 0 then 1 else n * factorial (n - 1); factorial 15' },
-        { name: 'Fibonacci(10)', code: 'def fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2); fib 10' },
-        { name: 'Fibonacci(15)', code: 'def fib n = if n <= 1 then n else fib (n - 1) + fib (n - 2); fib 15' },
-        { name: 'Parallel(100 nodes)', code: examples.parallel },
-      ];
-
-      const results = [];
-      const compiler = new WebGPUNetCompiler(device);
-
-      for (const bench of benchmarks) {
-        const compiled = await compiler.compile(bench.code);
-        const metrics = await compiler.execute(compiled);
+      try {
+        // Generate DOT format
+        const dotFormat = currentNet.toDot();
         
-        results.push({
-          name: bench.name,
-          time: metrics.gpuTime,
-          nodes: metrics.nodeCount,
-          result: metrics.result
+        // Create simple text visualization
+        let visualization = '🕸️ Interaction Net Structure:\n\n';
+        visualization += '═══════════════════════════\n\n';
+        
+        const stats = currentNet.getStats();
+        
+        // List agents
+        visualization += '📋 Agents:\n';
+        let agentIndex = 0;
+        for (const agent of currentNet.agents.values()) {
+          const typeName = getAgentTypeName(agent.type);
+          const dataStr = agent.data !== null ? `(${agent.data})` : '';
+          visualization += `  ${agentIndex}: ${typeName}${dataStr}\n`;
+          agentIndex++;
+        }
+        
+        visualization += '\n🔗 Connections:\n';
+        const connections = new Set();
+        
+        for (const agent of currentNet.agents.values()) {
+          agent.getAllPorts().forEach(port => {
+            if (port.isConnected() && !connections.has(`${port.id}-${port.connectedTo.id}`)) {
+              const connectedAgent = port.getConnectedAgent();
+              const agent1Name = getAgentTypeName(agent.type);
+              const agent2Name = getAgentTypeName(connectedAgent.type);
+              const portType = port.type === 0 ? 'PRINCIPAL' : `AUX[${port.index}]`;
+              visualization += `  ${agent1Name}(${portType}) ↔ ${agent2Name}\n`;
+              connections.add(`${port.id}-${port.connectedTo.id}`);
+              connections.add(`${port.connectedTo.id}-${port.id}`);
+            }
+          });
+        }
+        
+        visualization += '\n📊 Statistics:\n';
+        Object.entries(stats.typeDistribution).forEach(([type, count]) => {
+          visualization += `  ${type}: ${count}\n`;
         });
-
-        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        visualization += `\n⚡ Active pairs: ${stats.activePairs}\n`;
+        visualization += `🔄 Reduction steps: ${stats.reductionSteps}\n`;
+        
+        // Add computed result if available
+        const computedResult = getComputedResult(currentNet);
+        if (computedResult !== null) {
+          visualization += `\n🎯 Computed Result: ${computedResult}\n`;
+        }
+        
+        graphVizEl.textContent = visualization;
+        
+      } catch (error) {
+        graphVizEl.textContent = `Visualization error: ${error.message}`;
       }
-
-      displayBenchmarkResults(results);
-
-      benchmarkBtn.disabled = false;
-      benchmarkBtn.textContent = '📊 Run Benchmark';
     }
 
-    function displayBenchmarkResults(results) {
-      const container = document.getElementById('benchmarkResults');
-      const content = document.getElementById('benchmarkContent');
+    // Update metrics display
+    function updateMetrics(net) {
+      const stats = net.getStats();
+      const cards = document.querySelectorAll('.metric-value');
       
-      container.style.display = 'block';
+      // Calculate actual port count
+      let actualPortCount = 0;
+      for (const agent of net.agents.values()) {
+        actualPortCount += agent.getAllPorts().length;
+      }
       
-      let html = '';
-      let maxTime = Math.max(...results.map(r => r.time));
+      cards[0].textContent = stats.agentCount;
+      cards[1].textContent = actualPortCount;
+      cards[2].textContent = stats.activePairs;
+      cards[3].textContent = stats.reductionSteps;
+      cards[4].textContent = stats.activePairs === 0 ? '✅ Yes' : '❌ No';
+      cards[5].textContent = gpuReady ? '✅ Yes' : '❌ No';
       
-      results.forEach(result => {
-        const percentage = (result.time / maxTime) * 100;
-        html += `
-          <div class="benchmark-item">
-            <div>
-              <div style="font-weight: bold; color: #e0e0e0;">${result.name}</div>
-              <div style="color: #888; font-size: 0.85em; margin-top: 5px;">
-                ${result.nodes} nodes → Result: ${result.result}
-              </div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-weight: bold; color: #667eea; font-size: 1.2em;">
-                ${result.time.toFixed(2)}ms
-              </div>
-              <div style="color: #888; font-size: 0.85em;">
-                ${(result.nodes / result.time).toFixed(0)} nodes/ms
-              </div>
-            </div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${percentage}%"></div>
-          </div>
-        `;
+      // Update metrics labels to show type distribution
+      updateTypeDistribution(stats.typeDistribution);
+      
+      // Update computed result
+      const computedResult = getComputedResult(net);
+      console.log(`DEBUG: updateMetrics called, computedResult: ${computedResult}`);
+      const resultCard = document.getElementById('result-card');
+      if (resultCard) {
+        const resultValue = resultCard.querySelector('.metric-value');
+        if (computedResult !== null) {
+          console.log(`DEBUG: Setting result card to: ${computedResult}`);
+          resultValue.textContent = computedResult;
+          resultValue.style.color = '#00ff88';
+        } else {
+          console.log(`DEBUG: Setting result card to '--' (no result)`);
+          resultValue.textContent = '--';
+          resultValue.style.color = '#888';
+        }
+      } else {
+        console.log(`DEBUG: Result card not found`);
+      }
+    }
+    
+    // Update type distribution display
+    function updateTypeDistribution(typeDistribution) {
+      const metricsContainer = document.getElementById('metrics');
+      
+      // Remove existing type distribution cards if they exist
+      const existingTypeCards = metricsContainer.querySelectorAll('.type-distribution-card');
+      existingTypeCards.forEach(card => card.remove());
+      
+      // Add type distribution cards
+      Object.entries(typeDistribution).forEach(([type, count]) => {
+        if (count > 0) { // Only show types that exist
+          const typeCard = document.createElement('div');
+          typeCard.className = 'metric-card type-distribution-card';
+          typeCard.innerHTML = `
+            <div class="metric-label">${type}</div>
+            <div class="metric-value">${count}</div>
+          `;
+          metricsContainer.appendChild(typeCard);
+        }
       });
-      
-      content.innerHTML = html;
     }
 
-    compileBtn.addEventListener('click', compileAndExecute);
-    benchmarkBtn.addEventListener('click', runBenchmark);
+    // Event listeners
+    document.getElementById('parseBtn').addEventListener('click', parseToNet);
+    document.getElementById('reduceBtn').addEventListener('click', reduceNet);
+    document.getElementById('gpuReduceBtn').addEventListener('click', gpuReduceNet);
+    document.getElementById('visualizeBtn').addEventListener('click', visualizeNet);
 
-    exampleSelect.addEventListener('change', (e) => {
+    document.getElementById('exampleSelect').addEventListener('change', (e) => {
       const example = e.target.value;
       if (example && examples[example]) {
-        editor.value = examples[example];
-        exampleSelect.value = '';
+        document.getElementById('editor').value = examples[example];
+        e.target.value = '';
       }
     });
 
     // Keyboard shortcuts
-    editor.addEventListener('keydown', (e) => {
+    document.getElementById('editor').addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        compileAndExecute();
-      }
-
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
-        editor.selectionStart = editor.selectionEnd = start + 2;
+        parseToNet();
       }
     });
 
-    // Initialize WebGPU on load
-    initWebGPU();
+    // Get computed result from reduced net
+    function getComputedResult(net) {
+      // CRITICAL FIX: Find the NUM agent with the highest ID that represents the actual computation result
+      // This ensures we get the most recent result from arithmetic operations
+      const numAgents = Array.from(net.agents.values()).filter(agent => agent.type === AgentType.NUM);
+      
+      // DEBUG: Log all NUM agents for debugging
+      console.log(`DEBUG: getComputedResult found ${numAgents.length} NUM agents:`, numAgents.map(a => `${a.id}(${a.data})`));
+      
+      if (numAgents.length > 0) {
+        // Sort by ID to find the most recently created agent
+        numAgents.sort((a, b) => b.id - a.id);
+        
+        // Check if the highest ID agent is disconnected (likely a result)
+        const highestIdAgent = numAgents[0];
+        let isConnectedToOther = false;
+        highestIdAgent.getAllPorts().forEach(port => {
+          if (port.isConnected()) {
+            const connectedAgent = port.getConnectedAgent();
+            if (connectedAgent && connectedAgent !== highestIdAgent) {
+              isConnectedToOther = true;
+            }
+          }
+        });
+        
+        console.log(`DEBUG: Highest ID agent NUM${highestIdAgent.id}(${highestIdAgent.data}) connected to other: ${isConnectedToOther}`);
+        
+        if (!isConnectedToOther) {
+          console.log(`DEBUG: Returning result from highest ID agent: ${highestIdAgent.data}`);
+          return highestIdAgent.data;
+        } else {
+          // If the highest ID agent is connected, look for the highest disconnected agent
+          console.log(`DEBUG: Highest ID agent is connected, looking for disconnected agents...`);
+          for (const agent of numAgents) {
+            let isConnected = false;
+            agent.getAllPorts().forEach(port => {
+              if (port.isConnected()) {
+                const connectedAgent = port.getConnectedAgent();
+                if (connectedAgent && connectedAgent !== agent) {
+                  isConnected = true;
+                }
+              }
+            });
+            
+            console.log(`DEBUG: NUM${agent.id}(${agent.data}) connected: ${isConnected}`);
+            
+            if (!isConnected) {
+              console.log(`DEBUG: Returning result from disconnected agent: ${agent.data}`);
+              return agent.data;
+            }
+          }
+        }
+      }
+      
+      console.log(`DEBUG: No clear result found, returning null`);
+      return null; // No clear computed result
+    }
 
+    // Helper function to get agent type name from numeric value
+    function getAgentTypeName(typeValue) {
+      for (const [key, value] of Object.entries(AgentType)) {
+        if (typeof value === 'number' && value === typeValue) {
+          return key;
+        }
+      }
+      return 'UNKNOWN';
+    }
+
+    // Initialize on load
+    initialize();
+  </script>
+
+  <script>
     // ========================================================================
     // BENDSCRIPT ANIMATIONS
     // ========================================================================

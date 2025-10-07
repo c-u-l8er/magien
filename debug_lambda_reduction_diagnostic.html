@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Lambda Reduction</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .agent-info {
+            background-color: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        .problem {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .good {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .diagnostic {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .analysis {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Diagnostic Lambda Reduction</h1>
+        <p>Focused diagnostic analysis of lambda reduction to identify the root cause of incorrect results.</p>
+        
+        <button onclick="diagnoseNestedLambda()">Diagnose Nested Lambda Issue</button>
+        <button onclick="testVariableSubstitution()">Test Variable Substitution</button>
+        <button onclick="testArithmeticReduction()">Test Arithmetic Reduction</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script type="module">
+        import { InteractionNet, AgentType } from './src/core/interaction_net.js';
+        import { NetParser, parseZappToNet, tokenizeZapp } from './src/core/net_parser.js';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            let className = '';
+            
+            if (type === 'problem') {
+                className = 'problem';
+            } else if (type === 'good') {
+                className = 'good';
+            } else if (type === 'diagnostic') {
+                className = 'diagnostic';
+            } else if (type === 'analysis') {
+                className = 'analysis';
+            }
+            
+            if (className) {
+                output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            } else {
+                output.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            }
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        function getAgentTypeName(agentType) {
+            for (const [key, value] of Object.entries(AgentType)) {
+                if (typeof value === 'number' && value === agentType) {
+                    return key;
+                }
+            }
+            return 'UNKNOWN';
+        }
+
+        function printNetState(net, step) {
+            log(`<div class="step">Step ${step}: Net state`);
+            log(`  Agents: ${net.agents.size}`);
+            log(`  Reduction steps: ${net.reductionSteps}`);
+            
+            const agents = Array.from(net.agents.values());
+            for (const agent of agents) {
+                const typeName = getAgentTypeName(agent.type);
+                log(`  <div class="agent-info">Agent ${agent.id}: ${typeName} (arity: ${agent.arity}, data: ${agent.data})</div>`);
+                
+                // Print connections
+                agent.getAllPorts().forEach((port, index) => {
+                    if (port.isConnected()) {
+                        const connectedAgent = port.getConnectedAgent();
+                        const portType = index === 0 ? 'principal' : `aux[${index-1}]`;
+                        log(`    ${portType} -> Agent ${connectedAgent.id} (${getAgentTypeName(connectedAgent.type)})`);
+                    }
+                });
+            }
+            log(`</div>`);
+        }
+
+        function diagnoseNestedLambda() {
+            clearOutput();
+            log('=== DIAGNOSTIC: Analyzing Nested Lambda Issue ===', 'analysis');
+            log('Expression: (λx.λy.x + y) 2 3', 'analysis');
+            log('Expected result: 5', 'analysis');
+            log('Actual result: 2 (incorrect)', 'problem');
+            
+            try {
+                // Parse the expression
+                const tokens = tokenizeZapp('(λx.λy.x + y) 2 3');
+                log('\n=== TOKEN ANALYSIS ===', 'diagnostic');
+                tokens.forEach((token, i) => {
+                    log(`  ${i}: ${token.type} = "${token.value}"`);
+                });
+                
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                log('\n=== INITIAL NET STATE ===', 'diagnostic');
+                printNetState(net, 'Initial');
+                
+                // DIAGNOSTIC: Check the structure of the lambda applications
+                log('\n=== LAMBDA STRUCTURE ANALYSIS ===', 'diagnostic');
+                const agents = Array.from(net.agents.values());
+                const lambdaAgents = agents.filter(a => a.type === AgentType.LAM);
+                const appAgents = agents.filter(a => a.type === AgentType.APP);
+                const numAgents = agents.filter(a => a.type === AgentType.NUM);
+                const op2Agents = agents.filter(a => a.type === AgentType.OP2);
+                const conAgents = agents.filter(a => a.type === AgentType.CON);
+                
+                log(`Found ${lambdaAgents.length} LAM agents:`, lambdaAgents.map(a => `LAM${a.id}(${a.data})`));
+                log(`Found ${appAgents.length} APP agents:`, appAgents.map(a => `APP${a.id}`));
+                log(`Found ${numAgents.length} NUM agents:`, numAgents.map(a => `NUM${a.id}(${a.data})`));
+                log(`Found ${op2Agents.length} OP2 agents:`, op2Agents.map(a => `OP2${a.id}`));
+                log(`Found ${conAgents.length} CON agents:`, conAgents.map(a => `CON${a.id}(${a.data})`));
+                
+                // DIAGNOSTIC: Check the currying chain setup
+                log('\n=== CURRYING CHAIN ANALYSIS ===', 'diagnostic');
+                appAgents.forEach(app => {
+                    log(`APP${app.id} data: ${JSON.stringify(app.data)}`);
+                    if (app.data && app.data.isCurryingChain) {
+                        log(`  Part of currying chain: nextAppId=${app.data.nextAppId}, chainLength=${app.data.chainLength}`);
+                    }
+                });
+                
+                // DIAGNOSTIC: Check the OP2 agent connections
+                log('\n=== OP2 CONNECTIONS ANALYSIS ===', 'diagnostic');
+                op2Agents.forEach(op2 => {
+                    log(`OP2${op2.id} connections:`);
+                    if (op2.principalPort.isConnected()) {
+                        const principal = op2.principalPort.getConnectedAgent();
+                        log(`  principal -> ${principal.id}(${getAgentTypeName(principal.type)})`);
+                    }
+                    op2.auxiliaryPorts.forEach((port, index) => {
+                        if (port.isConnected()) {
+                            const connected = port.getConnectedAgent();
+                            log(`  aux[${index}] -> ${connected.id}(${getAgentTypeName(connected.type)}, data=${connected.data})`);
+                        } else {
+                            log(`  aux[${index}] -> NOT CONNECTED`);
+                        }
+                    });
+                });
+                
+                // DIAGNOSTIC: Check the CON agents (variable references)
+                log('\n=== VARIABLE REFERENCE ANALYSIS ===', 'diagnostic');
+                conAgents.forEach(con => {
+                    log(`CON${con.id}(${con.data}) connections:`);
+                    con.getAllPorts().forEach((port, index) => {
+                        if (port.isConnected()) {
+                            const connected = port.getConnectedAgent();
+                            log(`  port${index} -> ${connected.id}(${getAgentTypeName(connected.type)})`);
+                        }
+                    });
+                });
+                
+                // Perform reduction steps with detailed analysis
+                log('\n=== REDUCTION STEP ANALYSIS ===', 'diagnostic');
+                let step = 1;
+                let hadReduction = true;
+                
+                while (hadReduction && step <= 5) {
+                    log(`\n--- Reduction Step ${step} ---`, 'diagnostic');
+                    
+                    // Find active pairs before reduction
+                    const activePairs = net.findActivePairs();
+                    log(`Active pairs before step ${step}: ${activePairs.length}`);
+                    activePairs.forEach((pair, i) => {
+                        log(`  Pair ${i}: ${pair.type}`);
+                        if (pair.type === 'lambda') {
+                            log(`    LAM${pair.agent1.id}(${pair.agent1.data}) <-> APP${pair.agent2.id}`);
+                            if (pair.agent2.data) {
+                                log(`    APP data: ${JSON.stringify(pair.agent2.data)}`);
+                            }
+                        }
+                    });
+                    
+                    // Perform reduction
+                    hadReduction = net.reduceStep();
+                    log(`Reduction performed: ${hadReduction}`);
+                    
+                    if (hadReduction) {
+                        // ANALYZE the state after reduction
+                        log(`\n=== POST-REDUCTION ANALYSIS (Step ${step}) ===`, 'analysis');
+                        printNetState(net, `After step ${step}`);
+                        
+                        // Check for specific issues
+                        const currentAgents = Array.from(net.agents.values());
+                        const currentOP2 = currentAgents.filter(a => a.type === AgentType.OP2);
+                        const currentNUM = currentAgents.filter(a => a.type === AgentType.NUM);
+                        
+                        log(`Current OP2 agents: ${currentOP2.length}`);
+                        currentOP2.forEach(op2 => {
+                            log(`  OP2${op2.id}: aux[0] connected=${op2.auxiliaryPorts[0].isConnected()}, aux[1] connected=${op2.auxiliaryPorts[1].isConnected()}`);
+                            if (op2.auxiliaryPorts[0].isConnected()) {
+                                const conn = op2.auxiliaryPorts[0].getConnectedAgent();
+                                log(`    aux[0] -> ${conn.id}(${getAgentTypeName(conn.type)}, data=${conn.data})`);
+                            }
+                            if (op2.auxiliaryPorts[1].isConnected()) {
+                                const conn = op2.auxiliaryPorts[1].getConnectedAgent();
+                                log(`    aux[1] -> ${conn.id}(${getAgentTypeName(conn.type)}, data=${conn.data})`);
+                            }
+                        });
+                        
+                        log(`Current NUM agents: ${currentNUM.length}`);
+                        currentNUM.forEach(num => {
+                            log(`  NUM${num.id}(${num.data})`);
+                            // Check if this NUM is connected to anything
+                            const isConnected = num.getAllPorts().some(p => p.isConnected());
+                            log(`    Connected: ${isConnected}`);
+                        });
+                    }
+                    
+                    step++;
+                }
+                
+                // FINAL ANALYSIS
+                log('\n=== FINAL ANALYSIS ===', 'analysis');
+                const finalAgents = Array.from(net.agents.values());
+                const finalNUM = finalAgents.filter(a => a.type === AgentType.NUM);
+                
+                log(`Final NUM agents: ${finalNUM.length}`);
+                finalNUM.forEach(num => {
+                    log(`  NUM${num.id}(${num.data})`);
+                    const isConnected = num.getAllPorts().some(p => p.isConnected());
+                    log(`    Connected: ${isConnected}`);
+                });
+                
+                // Identify the most likely result
+                if (finalNUM.length > 0) {
+                    const resultCandidates = finalNUM.filter(num => {
+                        // Check if this NUM is not connected to other agents (likely a result)
+                        const isConnected = num.getAllPorts().some(p => p.isConnected());
+                        return !isConnected;
+                    });
+                    
+                    if (resultCandidates.length > 0) {
+                        const result = resultCandidates[resultCandidates.length - 1]; // Highest ID
+                        log(`Likely result: NUM${result.id}(${result.data})`, result.data === 5 ? 'good' : 'problem');
+                        
+                        if (result.data !== 5) {
+                            log('\n=== ROOT CAUSE ANALYSIS ===', 'analysis');
+                            log('The result is incorrect. Based on the reduction steps, here are the most likely causes:', 'problem');
+                            log('1. Variable substitution issue: The "x" variable is not being substituted with "2" correctly', 'problem');
+                            log('2. Arithmetic evaluation issue: The OP2 agent is not evaluating with the correct operands', 'problem');
+                            log('3. Result selection issue: The wrong NUM agent is being identified as the result', 'problem');
+                            
+                            // Check for evidence of each issue
+                            log('\n=== EVIDENCE COLLECTION ===', 'diagnostic');
+                            
+                            // Evidence for variable substitution issue
+                            const conX = finalAgents.find(a => a.type === AgentType.CON && a.data === 'x');
+                            if (conX) {
+                                log('EVIDENCE: CON agent for "x" still exists - variable substitution failed', 'problem');
+                            } else {
+                                log('EVIDENCE: CON agent for "x" was removed - variable substitution succeeded', 'good');
+                            }
+                            
+                            // Evidence for arithmetic evaluation issue
+                            const op2 = finalAgents.find(a => a.type === AgentType.OP2);
+                            if (op2) {
+                                log('EVIDENCE: OP2 agent still exists - arithmetic evaluation failed', 'problem');
+                            } else {
+                                log('EVIDENCE: OP2 agent was removed - arithmetic evaluation succeeded', 'good');
+                            }
+                            
+                            // Evidence for result selection issue
+                            const num2 = finalNUM.find(n => n.data === 2);
+                            const num3 = finalNUM.find(n => n.data === 3);
+                            const num5 = finalNUM.find(n => n.data === 5);
+                            
+                            if (num2 && !num5) {
+                                log('EVIDENCE: NUM(2) exists but NUM(5) does not - result may be incorrectly selected', 'problem');
+                            }
+                            
+                            if (num3 && !num5) {
+                                log('EVIDENCE: NUM(3) exists but NUM(5) does not - second argument not used in calculation', 'problem');
+                            }
+                        }
+                    } else {
+                        log('No clear result found - all NUM agents are connected', 'problem');
+                    }
+                } else {
+                    log('No NUM agents found in final state', 'problem');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'problem');
+                log(`Stack: ${error.stack}`, 'problem');
+            }
+        }
+
+        function testVariableSubstitution() {
+            clearOutput();
+            log('=== TESTING VARIABLE SUBSTITUTION ===', 'analysis');
+            log('Expression: (λx.x + 2) 3', 'analysis');
+            log('Expected result: 5', 'analysis');
+            
+            try {
+                const tokens = tokenizeZapp('(λx.x + 2) 3');
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                log('\n=== INITIAL STATE ===', 'diagnostic');
+                printNetState(net, 'Initial');
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                log(`Active pairs: ${activePairs.length}`);
+                
+                // Perform reduction with detailed logging
+                log('\n=== PERFORMING REDUCTION ===', 'diagnostic');
+                let step = 1;
+                let hadReduction = true;
+                
+                while (hadReduction && step <= 3) {
+                    log(`\n--- Step ${step} ---`);
+                    hadReduction = net.reduceStep();
+                    log(`Reduction performed: ${hadReduction}`);
+                    
+                    if (hadReduction) {
+                        printNetState(net, `After step ${step}`);
+                    }
+                    step++;
+                }
+                
+                // Check final result
+                const finalAgents = Array.from(net.agents.values());
+                const finalNUM = finalAgents.filter(a => a.type === AgentType.NUM);
+                
+                log(`\n=== FINAL RESULT ===`, 'analysis');
+                finalNUM.forEach(num => {
+                    log(`NUM${num.id}(${num.data})`);
+                });
+                
+                const result = finalNUM.find(num => {
+                    const isConnected = num.getAllPorts().some(p => p.isConnected());
+                    return !isConnected;
+                });
+                
+                if (result) {
+                    log(`Result: ${result.data}`, result.data === 5 ? 'good' : 'problem');
+                } else {
+                    log('No clear result found', 'problem');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'problem');
+            }
+        }
+
+        function testArithmeticReduction() {
+            clearOutput();
+            log('=== TESTING ARITHMETIC REDUCTION ===', 'analysis');
+            log('Expression: 2 + 3', 'analysis');
+            log('Expected result: 5', 'analysis');
+            
+            try {
+                const tokens = tokenizeZapp('2 + 3');
+                const parser = new NetParser();
+                const net = parser.parse(tokens);
+                
+                log('\n=== INITIAL STATE ===', 'diagnostic');
+                printNetState(net, 'Initial');
+                
+                // Find active pairs
+                const activePairs = net.findActivePairs();
+                log(`Active pairs: ${activePairs.length}`);
+                activePairs.forEach((pair, i) => {
+                    log(`  Pair ${i}: ${pair.type}`);
+                });
+                
+                // Perform reduction
+                log('\n=== PERFORMING REDUCTION ===', 'diagnostic');
+                const hadReduction = net.reduceStep();
+                log(`Reduction performed: ${hadReduction}`);
+                
+                printNetState(net, 'After reduction');
+                
+                // Check final result
+                const finalAgents = Array.from(net.agents.values());
+                const finalNUM = finalAgents.filter(a => a.type === AgentType.NUM);
+                
+                log(`\n=== FINAL RESULT ===`, 'analysis');
+                finalNUM.forEach(num => {
+                    log(`NUM${num.id}(${num.data})`);
+                });
+                
+                if (finalNUM.length === 1) {
+                    log(`Result: ${finalNUM[0].data}`, finalNUM[0].data === 5 ? 'good' : 'problem');
+                } else {
+                    log('Unexpected number of NUM agents', 'problem');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'problem');
+            }
+        }
+
+        // Make functions available globally
+        window.diagnoseNestedLambda = diagnoseNestedLambda;
+        window.testVariableSubstitution = testVariableSubstitution;
+        window.testArithmeticReduction = testArithmeticReduction;
+        window.clearOutput = clearOutput;
+    </script>
+</body>
+</html>

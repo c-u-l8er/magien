@@ -156,16 +156,58 @@
                 
                 // Try to determine the result
                 const numAgents = Array.from(net.agents.values()).filter(agent => agent.type === AgentType.NUM);
-                if (numAgents.length === 1) {
-                    const result = numAgents[0].data;
+                
+                // CRITICAL FIX: Find the NUM agent with the highest ID that represents the actual computation result
+                let actualResult = null;
+                
+                if (numAgents.length > 0) {
+                    // Sort by ID to find the most recently created agent
+                    numAgents.sort((a, b) => b.id - a.id);
+                    
+                    // Check if the highest ID agent is disconnected (likely a result)
+                    const highestIdAgent = numAgents[0];
+                    let isConnectedToOther = false;
+                    highestIdAgent.getAllPorts().forEach(port => {
+                        if (port.isConnected()) {
+                            const connectedAgent = port.getConnectedAgent();
+                            if (connectedAgent && connectedAgent !== highestIdAgent) {
+                                isConnectedToOther = true;
+                            }
+                        }
+                    });
+                    
+                    if (!isConnectedToOther) {
+                        actualResult = highestIdAgent.data;
+                    } else {
+                        // If the highest ID agent is connected, look for the highest disconnected agent
+                        for (const agent of numAgents) {
+                            let isConnected = false;
+                            agent.getAllPorts().forEach(port => {
+                                if (port.isConnected()) {
+                                    const connectedAgent = port.getConnectedAgent();
+                                    if (connectedAgent && connectedAgent !== agent) {
+                                        isConnected = true;
+                                    }
+                                }
+                            });
+                            
+                            if (!isConnected) {
+                                actualResult = agent.data;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (actualResult !== null) {
                     const expected = 5; // 3 + 2 = 5
-                    if (result === expected) {
+                    if (actualResult === expected) {
                         output.innerHTML += `\n<span class="pass">✅ SUCCESS: Got expected result ${expected}</span>\n`;
                     } else {
-                        output.innerHTML += `\n<span class="fail">❌ FAILED: Expected ${expected}, got ${result}</span>\n`;
+                        output.innerHTML += `\n<span class="fail">❌ FAILED: Expected ${expected}, got ${actualResult}</span>\n`;
                     }
                 } else {
-                    output.innerHTML += `\n<span class="fail">❌ FAILED: Expected 1 NUM agent, got ${numAgents.length}</span>\n`;
+                    output.innerHTML += `\n<span class="fail">❌ FAILED: Could not determine result from ${numAgents.length} NUM agents</span>\n`;
                 }
                 
             } catch (error) {

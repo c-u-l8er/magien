@@ -174,6 +174,63 @@
                 log(`Reduction result: ${JSON.stringify(result, null, 2)}`);
                 printNetState(net2, 'Final');
                 
+                // Extract final result
+                const finalAgents = Array.from(net2.agents.values());
+                let finalResult = null;
+                
+                // CRITICAL FIX: Find the NUM agent with the highest ID that represents the actual computation result
+                const numAgents = finalAgents.filter(agent => agent.type === AgentType.NUM);
+                
+                if (numAgents.length > 0) {
+                    // Sort by ID to find the most recently created agent
+                    numAgents.sort((a, b) => b.id - a.id);
+                    
+                    // Check if the highest ID agent is disconnected (likely a result)
+                    const highestIdAgent = numAgents[0];
+                    let isConnectedToOther = false;
+                    highestIdAgent.getAllPorts().forEach(port => {
+                        if (port.isConnected()) {
+                            const connectedAgent = port.getConnectedAgent();
+                            if (connectedAgent && connectedAgent !== highestIdAgent) {
+                                isConnectedToOther = true;
+                            }
+                        }
+                    });
+                    
+                    if (!isConnectedToOther) {
+                        finalResult = highestIdAgent.data;
+                        log(`Final result: ${finalResult} (from Agent ${highestIdAgent.id})`);
+                    } else {
+                        // If the highest ID agent is connected, look for the highest disconnected agent
+                        for (const agent of numAgents) {
+                            let isConnected = false;
+                            agent.getAllPorts().forEach(port => {
+                                if (port.isConnected()) {
+                                    const connectedAgent = port.getConnectedAgent();
+                                    if (connectedAgent && connectedAgent !== agent) {
+                                        isConnected = true;
+                                    }
+                                }
+                            });
+                            
+                            if (!isConnected) {
+                                finalResult = agent.data;
+                                log(`Final result: ${finalResult} (from Agent ${agent.id})`);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if (finalResult === null) {
+                    log('No clear result found - checking all NUM agents...');
+                    numAgents.forEach(agent => {
+                        log(`  NUM agent ${agent.id}: ${agent.data}`);
+                    });
+                } else {
+                    log(`SUCCESS: Computed result is ${finalResult} (expected: 5)`);
+                }
+                
             } catch (error) {
                 log(`Error: ${error.message}`);
                 log(`Stack: ${error.stack}`);
